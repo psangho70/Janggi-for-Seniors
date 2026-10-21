@@ -1,0 +1,2655 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>청춘 장기 - 어르신을 위한 큰글씨 효도 장기</title>
+  <meta name="description" content="돋보기 없이도 훤히 보이고, 광고 없이 편안하게 즐기는 어르신 맞춤형 안드로이드 효도 장기 앱. 무제한 한 수 무르기와 친절한 훈수 제공.">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#8C5824">
+
+  <!-- 시니어 가독성 극대화 웹폰트 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@500;700;900&family=Noto+Serif+KR:wght@700;900&display=swap" rel="stylesheet">
+
+  <style>
+    /* ============================================================
+       [1] 시니어 친화 디자인 토큰 및 고대비 색채 팔레트
+       ============================================================ */
+    :root {
+      --bg-wood-light: #F7EBD3;
+      --bg-wood-board: #E5C384;
+      --bg-wood-deep: #85531F;
+      --bg-wood-dark: #3F230A;
+      
+      --board-line: #52310C;
+      --board-star: #442608;
+
+      /* 기물 색상 (고대비) */
+      --cho-color: #047857;       /* 楚 (청록 에메랄드) */
+      --cho-light: #A7F3D0;
+      --cho-border: #064E3B;
+      --cho-bg: #ECFDF5;
+
+      --han-color: #B91C1C;       /* 漢 (비단 진홍) */
+      --han-light: #FECACA;
+      --han-border: #7F1D1D;
+      --han-bg: #FEF2F2;
+
+      --gold-accent: #D97706;
+      --gold-light: #FEF3C7;
+      --gold-glow: #FBBF24;
+
+      --text-main: #1C1917;
+      --text-subtle: #44403C;
+      --white: #FFFFFF;
+
+      --radius-sm: 8px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --radius-full: 9999px;
+
+      --shadow-board: 0 10px 25px rgba(44, 24, 7, 0.35);
+      --shadow-piece: 0 4px 8px rgba(0, 0, 0, 0.35);
+      --shadow-button: 0 4px 0 #5E3911, 0 6px 12px rgba(0,0,0,0.25);
+      --shadow-button-active: 0 1px 0 #5E3911, 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+      word-break: keep-all; /* 단어 중간에서 쪼개지는 어색한 줄바꿈 전면 방지 */
+    }
+
+    body {
+      background-color: #F7EBD3;
+      background-image: radial-gradient(circle at center, #3E240D 0%, #1A0D03 100%);
+      font-family: 'Noto Sans KR', sans-serif;
+      color: var(--text-main);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      min-height: 100dvh;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    /* 전체 앱 컨테이너 (스마트폰 최적 비율) */
+    #app-container {
+      width: 100vw;
+      max-width: 500px;
+      height: 100vh;
+      height: 100dvh;
+      max-height: 940px;
+      background: var(--bg-wood-light);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      box-shadow: 0 0 40px rgba(0,0,0,0.8);
+      overflow: hidden;
+    }
+
+    /* ============================================================
+       [2] 화면 공통 헤더
+       ============================================================ */
+    .app-header {
+      background: linear-gradient(180deg, #6B3F14 0%, #4D2B0C 100%);
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 3px solid #8B541E;
+      color: #FFFDF9;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+      z-index: 10;
+    }
+
+    .header-btn {
+      background: #87511E;
+      color: #FFFBEB;
+      border: 2px solid #D99B52;
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      white-space: nowrap;
+    }
+    .header-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+
+    .header-title-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      white-space: nowrap;
+    }
+    .header-mode-title {
+      font-size: 18px;
+      font-weight: 900;
+      color: #FDE68A;
+      letter-spacing: 0.5px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+      white-space: nowrap;
+    }
+    .header-turn-badge {
+      font-size: 13px;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: var(--radius-full);
+      margin-top: 2px;
+      background: #111827;
+      color: #FFF;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    .score-badge {
+      font-size: 14px;
+      font-weight: 700;
+      padding: 4px 8px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.2);
+      white-space: nowrap;
+    }
+
+    /* ============================================================
+       [3] 메인 홈 화면 (초간편 진입)
+       ============================================================ */
+    #view-home {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px max(18px, env(safe-area-inset-bottom, 18px));
+      background: linear-gradient(180deg, #F9F2E3 0%, #EBDAB8 100%);
+      overflow-y: auto;
+    }
+
+    .home-brand-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-top: 4px;
+      text-align: center;
+    }
+    .home-app-icon {
+      width: 90px;
+      height: 90px;
+      filter: drop-shadow(0 6px 14px rgba(94, 57, 17, 0.35));
+      margin-bottom: 8px;
+      border-radius: 22px;
+    }
+    .home-title {
+      font-size: 32px;
+      font-weight: 900;
+      color: #4A2808;
+      font-family: 'Noto Serif KR', serif;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      white-space: nowrap;
+    }
+    .home-subtitle {
+      font-size: 15px;
+      font-weight: 700;
+      color: #78481B;
+      background: #F4E4C4;
+      padding: 3px 14px;
+      border-radius: 20px;
+      border: 1px solid #DABF8D;
+      white-space: nowrap;
+    }
+
+    /* 홈 메인 액션 버튼 3종 (초대형) */
+    .home-action-list {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 12px 0;
+    }
+
+    .big-menu-card {
+      width: 100%;
+      background: #FFF;
+      border: 3px solid #D1A464;
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      cursor: pointer;
+      box-shadow: 0 5px 0 #9E743A, 0 8px 16px rgba(0,0,0,0.12);
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+      text-align: left;
+    }
+    .big-menu-card:active {
+      transform: translateY(3px);
+      box-shadow: 0 2px 0 #9E743A, 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .big-menu-card.primary {
+      background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+      border-color: #B45309;
+      box-shadow: 0 5px 0 #78350F, 0 8px 16px rgba(120,53,15,0.25);
+    }
+
+    .card-icon-circle {
+      width: 52px;
+      height: 52px;
+      border-radius: var(--radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      flex-shrink: 0;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.15);
+    }
+    .primary .card-icon-circle {
+      background: #B45309;
+      color: #FFF;
+    }
+    .secondary .card-icon-circle {
+      background: #0F766E;
+      color: #FFF;
+    }
+    .resume .card-icon-circle {
+      background: #4338CA;
+      color: #FFF;
+    }
+
+    .card-text-box h3 {
+      font-size: 20px;
+      font-weight: 900;
+      color: #291E13;
+      margin-bottom: 2px;
+      white-space: nowrap;
+    }
+    .card-text-box p {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #71583D;
+      white-space: nowrap;
+    }
+
+    /* 홈 하단 퀵 설정 바 */
+    .home-quick-bar {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding-top: 8px;
+      border-top: 2px dashed #D6C29E;
+    }
+    .quick-btn {
+      flex: 1;
+      background: #FAF5EB;
+      border: 2px solid #C4AC82;
+      border-radius: var(--radius-sm);
+      padding: 8px 2px;
+      color: #4A3319;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      text-align: center;
+      box-shadow: 0 2px 0 rgba(0,0,0,0.08);
+    }
+    .quick-btn:active {
+      background: #EFE4CC;
+      transform: translateY(1px);
+    }
+      align-items: center;
+      gap: 4px;
+    }
+    .quick-btn:active {
+      background: #EFE4CC;
+    }
+
+    /* ============================================================
+       [4] 대국 게임 화면 (Game Play View)
+       ============================================================ */
+    #view-game {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: #2D1A0A;
+      overflow: hidden;
+    }
+
+    /* 상대 정보 및 상태 바 */
+    .game-status-strip {
+      background: #46290E;
+      padding: 6px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #FFFBEB;
+      font-size: 14px;
+      font-weight: 700;
+      border-bottom: 2px solid #5C3714;
+    }
+    .player-tag {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .player-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+    }
+    .dot-cho { background: #10B981; border: 2px solid #FFF; }
+    .dot-han { background: #EF4444; border: 2px solid #FFF; }
+
+    /* 대형 장기판 컨테이너 (화면 중심) */
+    .board-container {
+      flex: 1;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 4px 6px;
+      position: relative;
+      touch-action: none;
+    }
+
+    #janggi-canvas {
+      display: block;
+      border-radius: 6px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      background: var(--bg-wood-board);
+      cursor: pointer;
+    }
+
+    /* 실시간 안내 자막 바 */
+    .game-guide-box {
+      background: linear-gradient(180deg, #FAF4E6 0%, #EBDAB8 100%);
+      padding: 8px 14px;
+      border-top: 3px solid #C49B5A;
+      border-bottom: 2px solid #C49B5A;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      min-height: 48px;
+    }
+    .guide-text {
+      font-size: 17px;
+      font-weight: 900;
+      color: #382006;
+      line-height: 1.3;
+    }
+    .guide-text.highlight {
+      color: #B91C1C;
+      animation: pulseAlert 1s infinite alternate;
+    }
+    @keyframes pulseAlert {
+      from { transform: scale(1); }
+      to { transform: scale(1.04); }
+    }
+
+    /* 하단 메인 컨트롤 바 (3대 빅 버튼) */
+    .game-bottom-controls {
+      background: #3B200A;
+      padding: 10px 10px 16px;
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      border-top: 2px solid #5C3714;
+    }
+
+    .action-btn {
+      flex: 1;
+      background: #FFFBEB;
+      color: #3B200A;
+      border: 3px solid #C7954E;
+      border-radius: var(--radius-md);
+      padding: 10px 4px;
+      font-size: 17px;
+      font-weight: 900;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #784C1C, 0 6px 10px rgba(0,0,0,0.3);
+      transition: transform 0.1s;
+    }
+    .action-btn:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #784C1C;
+    }
+    .action-btn.btn-undo {
+      background: #FEF3C7;
+      border-color: #D97706;
+    }
+    .action-btn.btn-hint {
+      background: #ECFDF5;
+      border-color: #059669;
+      color: #064E3B;
+    }
+    .action-btn.btn-pass {
+      background: #F1F5F9;
+      border-color: #64748B;
+    }
+
+    /* ============================================================
+       [5] 모달 & 팝업 시스템 (착수 확인, 승패, 설정)
+       ============================================================ */
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.72);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+      backdrop-filter: blur(3px);
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background: #FFFDF9;
+      border: 4px solid #8C5824;
+      border-radius: var(--radius-lg);
+      width: 92%;
+      max-width: 380px;
+      padding: 22px 16px;
+      text-align: center;
+      box-shadow: 0 16px 36px rgba(0,0,0,0.5);
+      animation: modalSlideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes modalSlideUp {
+      from { transform: translateY(30px) scale(0.95); opacity: 0; }
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: 900;
+      color: #382006;
+      margin-bottom: 8px;
+      font-family: 'Noto Serif KR', serif;
+      white-space: nowrap;
+    }
+    .modal-desc {
+      font-size: 15.5px;
+      font-weight: 600;
+      color: #5C4325;
+      line-height: 1.35;
+      margin-bottom: 16px;
+      word-break: keep-all;
+    }
+
+    .modal-btn-row {
+      display: flex;
+      gap: 12px;
+    }
+    .modal-btn {
+      flex: 1;
+      padding: 13px 10px;
+      font-size: 18px;
+      font-weight: 900;
+      border-radius: var(--radius-md);
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 0 rgba(0,0,0,0.25);
+      white-space: nowrap;
+    }
+    .modal-btn:active {
+      transform: translateY(3px);
+      box-shadow: none;
+    }
+    .modal-btn-primary {
+      background: #B45309;
+      color: #FFF;
+    }
+    .modal-btn-secondary {
+      background: #E5E7EB;
+      color: #374151;
+    }
+
+    /* 포진(차림) 선택 모달 */
+    .formation-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .formation-item {
+      background: #FDF8ED;
+      border: 2px solid #C49B5A;
+      border-radius: var(--radius-md);
+      padding: 10px 4px;
+      cursor: pointer;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .formation-item.selected {
+      background: #FEF3C7;
+      border-color: #B45309;
+      border-width: 3px;
+      box-shadow: 0 0 10px rgba(180, 83, 9, 0.35);
+    }
+    .formation-name-main {
+      font-size: 16px;
+      font-weight: 900;
+      color: #2D1A0A;
+      white-space: nowrap;
+      letter-spacing: -0.3px;
+    }
+    .formation-name-sub {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #8C5824;
+      margin: 2px 0 4px;
+      white-space: nowrap;
+    }
+    .formation-preview {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #B45309;
+      letter-spacing: 2px;
+      white-space: nowrap;
+      background: rgba(180, 83, 9, 0.08);
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    /* 설정 모달 옵션 목록 */
+    .setting-group {
+      text-align: left;
+      margin-bottom: 16px;
+    }
+    .setting-label {
+      font-size: 17px;
+      font-weight: 900;
+      color: #382006;
+      margin-bottom: 8px;
+      display: block;
+    }
+    .setting-btn-group {
+      display: flex;
+      gap: 8px;
+    }
+    .setting-opt-btn {
+      flex: 1;
+      padding: 10px 4px;
+      background: #F3EADB;
+      border: 2px solid #BA9B6E;
+      border-radius: var(--radius-sm);
+      font-size: 16px;
+      font-weight: 700;
+      color: #4A3319;
+      cursor: pointer;
+      text-align: center;
+    }
+    .setting-opt-btn.active {
+      background: #B45309;
+      border-color: #78350F;
+      color: #FFF;
+    }
+
+    /* 숨김 처리 */
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app-container">
+
+  <!-- ============================================================
+       [뷰 1] 홈 화면
+       ============================================================ -->
+  <div id="view-home">
+    <div class="home-brand-area">
+      <img src="icon.svg" alt="청춘 장기 아이콘" class="home-app-icon">
+      <h1 class="home-title">청 춘 장 기</h1>
+      <div class="home-subtitle">어르신을 위한 큰글씨 효도 장기</div>
+    </div>
+
+    <!-- 메인 대국 선택 카드 -->
+    <div class="home-action-list">
+      <div class="big-menu-card primary" id="btn-start-ai">
+        <div class="card-icon-circle">🤖</div>
+        <div class="card-text-box">
+          <h3>혼자서 장기두기</h3>
+          <p>시간 제한 없이 AI와 느긋하게 한판</p>
+        </div>
+      </div>
+
+      <div class="big-menu-card secondary" id="btn-start-2p">
+        <div class="card-icon-circle">👥</div>
+        <div class="card-text-box">
+          <h3>둘이서 함께두기</h3>
+          <p>스마트폰을 마주두고 함께 대국</p>
+        </div>
+      </div>
+
+      <div class="big-menu-card resume hidden" id="btn-resume-game">
+        <div class="card-icon-circle">⏳</div>
+        <div class="card-text-box">
+          <h3>이어서 계속두기</h3>
+          <p>직전에 두던 판을 그대로 이어하기</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 하단 빠른 설정 바 -->
+    <div class="home-quick-bar">
+      <button class="quick-btn" id="btn-toggle-font-home">
+        <span style="font-size:20px;">🔤</span>
+        <span id="label-piece-type" style="font-size:13.5px; font-weight:800; white-space:nowrap;">한글 기물</span>
+      </button>
+      <button class="quick-btn" id="btn-open-level-home">
+        <span style="font-size:20px;">🎯</span>
+        <span id="label-ai-level-title" style="font-size:13.5px; font-weight:900; white-space:nowrap;">기력: 초급</span>
+        <span id="label-ai-level-sub" style="font-size:11.5px; font-weight:700; color:#78481B; white-space:nowrap;">(10급~6급)</span>
+      </button>
+      <button class="quick-btn" id="btn-open-settings-home">
+        <span style="font-size:20px;">⚙️</span>
+        <span style="font-size:13.5px; font-weight:800; white-space:nowrap;">환경 설정</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       [뷰 2] 대국 게임 화면
+       ============================================================ -->
+  <div id="view-game" class="hidden">
+    <!-- 상단 대국 헤더 -->
+    <header class="app-header">
+      <button class="header-btn" id="btn-game-back">
+        <span>◀</span> 나가기
+      </button>
+      <div class="header-title-box">
+        <div class="header-mode-title" id="header-mode-text">AI 대국 (초급: 10급~6급)</div>
+        <div class="header-turn-badge" id="header-turn-badge">
+          <span id="header-turn-icon">🔴</span>
+          <span id="header-turn-text">한(어르신) 차례</span>
+        </div>
+      </div>
+      <button class="header-btn" id="btn-game-toggle-font">
+        <span id="btn-game-font-label">한글</span>
+      </button>
+    </header>
+
+    <!-- 상대 및 본인 점수 바 -->
+    <div class="game-status-strip">
+      <div class="player-tag">
+        <span class="player-dot dot-cho"></span>
+        <span id="info-cho-name">상대 (楚)</span>
+        <span class="score-badge" id="info-cho-score">72점</span>
+      </div>
+      <div class="player-tag">
+        <span id="info-han-score">73.5점</span>
+        <span id="info-han-name">어르신 (漢)</span>
+        <span class="player-dot dot-han"></span>
+      </div>
+    </div>
+
+    <!-- 중앙 대형 장기판 Canvas -->
+    <div class="board-container" id="board-container">
+      <canvas id="janggi-canvas"></canvas>
+    </div>
+
+    <!-- 실시간 친절 안내 바 -->
+    <div class="game-guide-box">
+      <div class="guide-text" id="guide-text">
+        어르신 차례입니다. 움직이실 기물을 눌러주세요.
+      </div>
+    </div>
+
+    <!-- 하단 컨트롤 바 (3대 빅 버튼) -->
+    <div class="game-bottom-controls">
+      <button class="action-btn btn-undo" id="btn-action-undo">
+        <span style="font-size:22px;">↩️</span>
+        <span>한 수 무르기</span>
+      </button>
+      <button class="action-btn btn-hint" id="btn-action-hint">
+        <span style="font-size:22px;">💡</span>
+        <span>친절한 훈수</span>
+      </button>
+      <button class="action-btn btn-pass" id="btn-action-pass">
+        <span style="font-size:22px;">✋</span>
+        <span>한 수 쉼</span>
+      </button>
+      <button class="action-btn" id="btn-action-restart">
+        <span style="font-size:22px;">🔄</span>
+        <span>다시하기</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       [모달 1] 2단계 착수 확인 팝업 (오착수 방지)
+       ============================================================ -->
+  <div class="modal-overlay" id="modal-confirm-move">
+    <div class="modal-card">
+      <h2 class="modal-title">착수 확인</h2>
+      <p class="modal-desc" id="confirm-move-desc">
+        선택하신 기물을 이 자리에 두시겠습니까?
+      </p>
+      <div class="modal-btn-row">
+        <button class="modal-btn modal-btn-secondary" id="btn-cancel-move">취소 (다시 선택)</button>
+        <button class="modal-btn modal-btn-primary" id="btn-confirm-move">예, 착수</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       [모달 2] 포진(차림) 선택 모달
+       ============================================================ -->
+  <div class="modal-overlay" id="modal-formation">
+    <div class="modal-card">
+      <h2 class="modal-title">장기 차림(포진) 선택</h2>
+      <p class="modal-desc">어르신의 마와 상 위치를 선택하세요.</p>
+      <div class="formation-list">
+        <div class="formation-item selected" data-formation="0">
+          <div class="formation-name-main">마상마상</div>
+          <div class="formation-name-sub">(왼마)</div>
+          <div class="formation-preview">馬 象 馬 象</div>
+        </div>
+        <div class="formation-item" data-formation="1">
+          <div class="formation-name-main">상마마상</div>
+          <div class="formation-name-sub">(양마)</div>
+          <div class="formation-preview">象 馬 馬 象</div>
+        </div>
+        <div class="formation-item" data-formation="2">
+          <div class="formation-name-main">마상상마</div>
+          <div class="formation-name-sub">(양상)</div>
+          <div class="formation-preview">馬 象 象 馬</div>
+        </div>
+        <div class="formation-item" data-formation="3">
+          <div class="formation-name-main">상마상마</div>
+          <div class="formation-name-sub">(귀마)</div>
+          <div class="formation-preview">象 馬 象 馬</div>
+        </div>
+      </div>
+      <button class="modal-btn modal-btn-primary" id="btn-confirm-formation" style="width:100%;">
+        대국 시작하기
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       [모달 3] 대국 결과 모달 (승리 / 패배 / 빅장)
+       ============================================================ -->
+  <div class="modal-overlay" id="modal-game-over">
+    <div class="modal-card">
+      <h2 class="modal-title" id="game-over-title">대국 종료</h2>
+      <p class="modal-desc" id="game-over-desc">승패 결과 안내</p>
+      <div class="modal-btn-row">
+        <button class="modal-btn modal-btn-secondary" id="btn-game-over-home">홈으로</button>
+        <button class="modal-btn modal-btn-primary" id="btn-game-over-restart">새 판 두기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       [모달 4] 환경 설정 모달
+       ============================================================ -->
+  <div class="modal-overlay" id="modal-settings">
+    <div class="modal-card">
+      <h2 class="modal-title">환경 설정</h2>
+
+      <div class="setting-group">
+        <label class="setting-label">기물 글씨 표기</label>
+        <div class="setting-btn-group">
+          <button class="setting-opt-btn active" id="opt-font-ko">한글 (궁,차,포...)</button>
+          <button class="setting-opt-btn" id="opt-font-han">한자 (楚/漢,車,包...)</button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <label class="setting-label">착수 조작 방식</label>
+        <div class="setting-btn-group">
+          <button class="setting-opt-btn active" id="opt-move-confirm">2단계 확인 후 착수</button>
+          <button class="setting-opt-btn" id="opt-move-direct">원터치 바로 착수</button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <label class="setting-label">친절한 우리말 음성 해설</label>
+        <div class="setting-btn-group">
+          <button class="setting-opt-btn active" id="opt-voice-on">소리 켬</button>
+          <button class="setting-opt-btn" id="opt-voice-off">소리 끔</button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <label class="setting-label">AI 기력(난이도) - 아마추어 등급 체계</label>
+        <div class="setting-btn-group">
+          <button class="setting-opt-btn active" id="opt-ai-easy">초급<br><span style="font-size:13px; font-weight:700;">(10급~6급)</span></button>
+          <button class="setting-opt-btn" id="opt-ai-mid">중급<br><span style="font-size:13px; font-weight:700;">(5급~2급)</span></button>
+          <button class="setting-opt-btn" id="opt-ai-hard">고급<br><span style="font-size:13px; font-weight:700;">(아마 1급)</span></button>
+        </div>
+        <!-- 선택된 난이도 수준 안내 카드 -->
+        <div id="ai-level-desc-box" style="margin-top:12px; background:#f7efe5; border:2px solid #b58863; border-radius:12px; padding:12px 14px; text-align:left; box-shadow:inset 0 1px 3px rgba(0,0,0,0.05);">
+          <div style="font-weight:900; font-size:15px; color:#5c3a21; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+            <span>💡</span> <span id="ai-desc-title">초급 (10급 ~ 6급) 수준 안내</span>
+          </div>
+          <div id="ai-desc-detail" style="font-size:13.5px; color:#4a2c11; line-height:1.45; font-weight:600;">
+            장기를 배우시거나 가볍게 즐기시기 좋은 단계입니다. 기본 장기 규칙과 멍군을 지키며, 어르신께서 시원하게 이기실 수 있도록 편안하게 맞춰둡니다.
+          </div>
+        </div>
+      </div>
+
+      <button class="modal-btn modal-btn-primary" id="btn-close-settings" style="width:100%; margin-top:10px;">
+        설정 완료
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ============================================================
+     [스크립트] 한국 장기 룰 엔진 + AI + 시니어 특화 인터페이스
+     ============================================================ -->
+<script>
+/**
+ * 청춘 장기 (Senior Janggi) 통합 엔진
+ * 1. 장기 도메인 및 기물 정의
+ * 2. 대한장기협회 공식 룰 (멱 판정, 궁성 대각선, 포 넘기, 빅장 등)
+ * 3. Alpha-Beta 로컬 AI & 훈수 엔진
+ * 4. 시니어 특화 Canvas 렌더러 (한글/한자, 고대비, 2단계 착수)
+ * 5. Web Audio 효과음 및 Web Speech 우리말 낭독
+ */
+
+// --- 기물 정의 ---
+// 진영: 1 = 초(楚, 초록), 2 = 한(漢, 빨강, 어르신)
+const TEAM_CHO = 1;
+const TEAM_HAN = 2;
+
+// 기물 종류
+const TYPE_KING    = 1; // 궁 (宮)
+const TYPE_CAR     = 2; // 차 (車)
+const TYPE_CANNON  = 3; // 포 (包)
+const TYPE_HORSE   = 4; // 마 (馬)
+const TYPE_ELEPHANT= 5; // 상 (象)
+const TYPE_ADVISOR = 6; // 사 (士)
+const TYPE_PAWN    = 7; // 졸(楚) / 병(漢)
+
+// 기물 기본 가치 (대한장기협회 점수제)
+const PIECE_SCORES = {
+  [TYPE_KING]: 0,
+  [TYPE_CAR]: 13,
+  [TYPE_CANNON]: 7,
+  [TYPE_HORSE]: 5,
+  [TYPE_ELEPHANT]: 3,
+  [TYPE_ADVISOR]: 3,
+  [TYPE_PAWN]: 2
+};
+
+// 기물 한글/한자 표기 매핑
+const PIECE_NAMES = {
+  ko: {
+    [TEAM_CHO]: { [TYPE_KING]: '궁', [TYPE_CAR]: '차', [TYPE_CANNON]: '포', [TYPE_HORSE]: '마', [TYPE_ELEPHANT]: '상', [TYPE_ADVISOR]: '사', [TYPE_PAWN]: '졸' },
+    [TEAM_HAN]: { [TYPE_KING]: '궁', [TYPE_CAR]: '차', [TYPE_CANNON]: '포', [TYPE_HORSE]: '마', [TYPE_ELEPHANT]: '상', [TYPE_ADVISOR]: '사', [TYPE_PAWN]: '병' }
+  },
+  han: {
+    [TEAM_CHO]: { [TYPE_KING]: '楚', [TYPE_CAR]: '車', [TYPE_CANNON]: '包', [TYPE_HORSE]: '馬', [TYPE_ELEPHANT]: '象', [TYPE_ADVISOR]: '士', [TYPE_PAWN]: '卒' },
+    [TEAM_HAN]: { [TYPE_KING]: '漢', [TYPE_CAR]: '車', [TYPE_CANNON]: '包', [TYPE_HORSE]: '馬', [TYPE_ELEPHANT]: '象', [TYPE_ADVISOR]: '士', [TYPE_PAWN]: '兵' }
+  }
+};
+
+// 장기판 규격: 9 x 10
+const COLS = 9;
+const ROWS = 10;
+
+// 포진(차림) 정의: [x=1, x=2, x=6, x=7]
+// 0: 마상마상, 1: 상마마상, 2: 마상상마, 3: 상마상마
+const FORMATIONS = [
+  [TYPE_HORSE, TYPE_ELEPHANT, TYPE_HORSE, TYPE_ELEPHANT],
+  [TYPE_ELEPHANT, TYPE_HORSE, TYPE_HORSE, TYPE_ELEPHANT],
+  [TYPE_HORSE, TYPE_ELEPHANT, TYPE_ELEPHANT, TYPE_HORSE],
+  [TYPE_ELEPHANT, TYPE_HORSE, TYPE_ELEPHANT, TYPE_HORSE]
+];
+
+// --- 게임 상태 관리자 ---
+class JanggiGame {
+  constructor() {
+    this.board = Array(ROWS).fill(null).map(() => Array(COLS).fill(null));
+    this.currentTurn = TEAM_HAN; // 한(어르신) 선수 혹은 초 선수 (장기에서는 보통 초 선수 또는 한 덤 1.5점 선택)
+    this.gameMode = 'ai'; // 'ai' or '2p'
+    this.aiLevel = 'easy'; // 'easy', 'mid', 'hard'
+    this.choFormation = 0;
+    this.hanFormation = 0;
+    this.history = []; // 무르기용 기보 스택
+    this.isGameOver = false;
+    this.winner = null;
+    this.lastMove = null;
+    this.inCheck = false;
+  }
+
+  // 초기 보드 세팅
+  initBoard(hanForm = 0, choForm = 0) {
+    this.board = Array(ROWS).fill(null).map(() => Array(COLS).fill(null));
+    this.hanFormation = hanForm;
+    this.choFormation = choForm;
+    this.currentTurn = TEAM_HAN;
+    this.history = [];
+    this.isGameOver = false;
+    this.winner = null;
+    this.lastMove = null;
+    this.inCheck = false;
+
+    const choF = FORMATIONS[choForm];
+    const hanF = FORMATIONS[hanForm];
+
+    // --- 초(楚) 기물 배치 (y: 0 ~ 3) ---
+    // 0행: 차 [포진0] [포진1] 사 궁 사 [포진2] [포진3] 차
+    this.board[0][0] = { team: TEAM_CHO, type: TYPE_CAR };
+    this.board[0][1] = { team: TEAM_CHO, type: choF[0] };
+    this.board[0][2] = { team: TEAM_CHO, type: choF[1] };
+    this.board[0][3] = { team: TEAM_CHO, type: TYPE_ADVISOR };
+    this.board[0][5] = { team: TEAM_CHO, type: TYPE_ADVISOR };
+    this.board[0][6] = { team: TEAM_CHO, type: choF[2] };
+    this.board[0][7] = { team: TEAM_CHO, type: choF[3] };
+    this.board[0][8] = { team: TEAM_CHO, type: TYPE_CAR };
+    // 궁: y=1, x=4
+    this.board[1][4] = { team: TEAM_CHO, type: TYPE_KING };
+    // 포: y=2, x=1, x=7
+    this.board[2][1] = { team: TEAM_CHO, type: TYPE_CANNON };
+    this.board[2][7] = { team: TEAM_CHO, type: TYPE_CANNON };
+    // 졸: y=3, x=0, 2, 4, 6, 8
+    for (let x = 0; x < COLS; x += 2) {
+      this.board[3][x] = { team: TEAM_CHO, type: TYPE_PAWN };
+    }
+
+    // --- 한(漢) 기물 배치 (y: 6 ~ 9) ---
+    // 병: y=6, x=0, 2, 4, 6, 8
+    for (let x = 0; x < COLS; x += 2) {
+      this.board[6][x] = { team: TEAM_HAN, type: TYPE_PAWN };
+    }
+    // 포: y=7, x=1, x=7
+    this.board[7][1] = { team: TEAM_HAN, type: TYPE_CANNON };
+    this.board[7][7] = { team: TEAM_HAN, type: TYPE_CANNON };
+    // 궁: y=8, x=4
+    this.board[8][4] = { team: TEAM_HAN, type: TYPE_KING };
+    // 9행: 차 [포진0] [포진1] 사 궁 사 [포진2] [포진3] 차
+    this.board[9][0] = { team: TEAM_HAN, type: TYPE_CAR };
+    this.board[9][1] = { team: TEAM_HAN, type: hanF[0] };
+    this.board[9][2] = { team: TEAM_HAN, type: hanF[1] };
+    this.board[9][3] = { team: TEAM_HAN, type: TYPE_ADVISOR };
+    this.board[9][5] = { team: TEAM_HAN, type: TYPE_ADVISOR };
+    this.board[9][6] = { team: TEAM_HAN, type: hanF[2] };
+    this.board[9][7] = { team: TEAM_HAN, type: hanF[3] };
+    this.board[9][8] = { team: TEAM_HAN, type: TYPE_CAR };
+  }
+
+  // 좌표가 보드 내부인지
+  isValidPos(x, y) {
+    return x >= 0 && x < COLS && y >= 0 && y < ROWS;
+  }
+
+  // 궁성 범위인지
+  isPalace(x, y, team) {
+    if (x < 3 || x > 5) return false;
+    if (team === TEAM_CHO) return y >= 0 && y <= 2;
+    if (team === TEAM_HAN) return y >= 7 && y <= 9;
+    return (y >= 0 && y <= 2) || (y >= 7 && y <= 9);
+  }
+
+  // 특정 위치의 합법적 이동 가능 위치 목록 계산
+  getPossibleMoves(x, y) {
+    const piece = this.board[y][x];
+    if (!piece || piece.team !== this.currentTurn) return [];
+
+    const moves = [];
+    const team = piece.team;
+    const oppTeam = team === TEAM_CHO ? TEAM_HAN : TEAM_CHO;
+
+    const addMove = (nx, ny) => {
+      if (!this.isValidPos(nx, ny)) return false;
+      const target = this.board[ny][nx];
+      if (!target) {
+        moves.push({ x: nx, y: ny, captured: null });
+        return true;
+      } else if (target.team === oppTeam) {
+        moves.push({ x: nx, y: ny, captured: target });
+        return false; // 더 이상 직선 통과 불가
+      }
+      return false; // 아군 기물로 막힘
+    };
+
+    switch (piece.type) {
+      // 1. 졸 / 병: 전진 1칸, 좌우 1칸 (후퇴 불가), 궁성 내 대각선 전진 가능
+      case TYPE_PAWN: {
+        const dy = team === TEAM_CHO ? 1 : -1;
+        // 직진
+        addMove(x, y + dy);
+        // 좌우
+        addMove(x - 1, y);
+        addMove(x + 1, y);
+        // 궁성 내 대각선 전진
+        if (this.isPalace(x, y, team === TEAM_CHO ? TEAM_HAN : TEAM_CHO)) {
+          // 상대 궁성 침투 시 대각선 전진
+          if ((x === 3 && y === 7 && team === TEAM_CHO) || (x === 5 && y === 7 && team === TEAM_CHO)) addMove(4, 8);
+          if (x === 4 && y === 8 && team === TEAM_CHO) { addMove(3, 9); addMove(5, 9); }
+          if ((x === 3 && y === 2 && team === TEAM_HAN) || (x === 5 && y === 2 && team === TEAM_HAN)) addMove(4, 1);
+          if (x === 4 && y === 1 && team === TEAM_HAN) { addMove(3, 0); addMove(5, 0); }
+        }
+        break;
+      }
+
+      // 2. 궁 & 사: 궁성 내 선을 따라 1칸 이동
+      case TYPE_KING:
+      case TYPE_ADVISOR: {
+        const palaceYMin = team === TEAM_CHO ? 0 : 7;
+        const palaceYMax = team === TEAM_CHO ? 2 : 9;
+        const palaceMoves = [
+          [0, 1], [0, -1], [1, 0], [-1, 0] // 십자 이동
+        ];
+        // 대각선 이동 가능 위치 (모서리 또는 정중앙)
+        const isCenter = (x === 4 && (y === palaceYMin + 1));
+        const isCorner = ((x === 3 || x === 5) && (y === palaceYMin || y === palaceYMax));
+
+        if (isCenter) {
+          palaceMoves.push([1, 1], [1, -1], [-1, 1], [-1, -1]);
+        } else if (isCorner) {
+          // 중앙으로만 대각선 이동 가능
+          const dx = 4 - x;
+          const dy = (palaceYMin + 1) - y;
+          palaceMoves.push([dx, dy]);
+        }
+
+        for (const [dx, dy] of palaceMoves) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx >= 3 && nx <= 5 && ny >= palaceYMin && ny <= palaceYMax) {
+            addMove(nx, ny);
+          }
+        }
+        break;
+      }
+
+      // 3. 차 (車): 직선 무제한, 궁성 대각선 통과 가능
+      case TYPE_CAR: {
+        const dirs = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+        for (const [dx, dy] of dirs) {
+          let nx = x + dx;
+          let ny = y + dy;
+          while (this.isValidPos(nx, ny)) {
+            const canContinue = addMove(nx, ny);
+            if (!canContinue) break;
+            nx += dx;
+            ny += dy;
+          }
+        }
+        // 궁성 대각선 이동
+        const checkPalaceDiagonal = (pYMin) => {
+          if (x === 4 && y === pYMin + 1) { // 중앙
+            const dDirs = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+            for (const [dx, dy] of dDirs) {
+              addMove(x + dx, y + dy);
+            }
+          } else if ((x === 3 || x === 5) && (y === pYMin || y === pYMin + 2)) { // 모서리
+            const dx = x === 3 ? 1 : -1;
+            const dy = y === pYMin ? 1 : -1;
+            if (addMove(x + dx, y + dy)) {
+              addMove(x + dx * 2, y + dy * 2);
+            }
+          }
+        };
+        if (this.isPalace(x, y, TEAM_CHO)) checkPalaceDiagonal(0);
+        if (this.isPalace(x, y, TEAM_HAN)) checkPalaceDiagonal(7);
+        break;
+      }
+
+      // 4. 포 (包): 기물 1개를 넘어야만 함. 포끼리는 넘거나 잡을 수 없음!
+      case TYPE_CANNON: {
+        const dirs = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+        for (const [dx, dy] of dirs) {
+          let nx = x + dx;
+          let ny = y + dy;
+          let bridgeFound = false;
+
+          while (this.isValidPos(nx, ny)) {
+            const current = this.board[ny][nx];
+            if (!bridgeFound) {
+              if (current) {
+                // 다리가 될 기물 발견 (단, 포는 다리가 될 수 없음)
+                if (current.type === TYPE_CANNON) break;
+                bridgeFound = true;
+              }
+            } else {
+              // 다리를 넘은 후 착수
+              if (!current) {
+                moves.push({ x: nx, y: ny, captured: null });
+              } else {
+                // 다른 기물을 잡을 수 있음 (단, 포는 잡을 수 없음)
+                if (current.team === oppTeam && current.type !== TYPE_CANNON) {
+                  moves.push({ x: nx, y: ny, captured: current });
+                }
+                break; // 기물을 만나면 더 이상 전진 불가
+              }
+            }
+            nx += dx;
+            ny += dy;
+          }
+        }
+
+        // 궁성 대각선 포 넘기
+        const checkPalaceCannon = (pYMin) => {
+          if ((x === 3 || x === 5) && (y === pYMin || y === pYMin + 2)) {
+            const midX = 4, midY = pYMin + 1;
+            const oppX = x === 3 ? 5 : 3;
+            const oppY = y === pYMin ? pYMin + 2 : pYMin;
+            const bridge = this.board[midY][midX];
+            if (bridge && bridge.type !== TYPE_CANNON) {
+              const target = this.board[oppY][oppX];
+              if (!target) {
+                moves.push({ x: oppX, y: oppY, captured: null });
+              } else if (target.team === oppTeam && target.type !== TYPE_CANNON) {
+                moves.push({ x: oppX, y: oppY, captured: target });
+              }
+            }
+          }
+        };
+        if (this.isPalace(x, y, TEAM_CHO)) checkPalaceCannon(0);
+        if (this.isPalace(x, y, TEAM_HAN)) checkPalaceCannon(7);
+        break;
+      }
+
+      // 5. 마 (馬): 날 일(日)자 이동 (직선 1칸 + 대각선 1칸), 멱(가로막힘) 판정
+      case TYPE_HORSE: {
+        const horseMoves = [
+          { step: [0, -1], jumps: [[-1, -2], [1, -2]] }, // 상
+          { step: [0, 1],  jumps: [[-1, 2], [1, 2]] },   // 하
+          { step: [-1, 0], jumps: [[-2, -1], [-2, 1]] }, // 좌
+          { step: [1, 0],  jumps: [[2, -1], [2, 1]] }    // 우
+        ];
+        for (const hm of horseMoves) {
+          const bx = x + hm.step[0];
+          const by = y + hm.step[1];
+          // 멱이 비어있어야 점프 가능
+          if (this.isValidPos(bx, by) && !this.board[by][bx]) {
+            for (const [jx, jy] of hm.jumps) {
+              addMove(x + jx, y + jy);
+            }
+          }
+        }
+        break;
+      }
+
+      // 6. 상 (象): 쓸 용(用)자 이동 (직선 1칸 + 대각선 2칸), 멱(2곳) 판정
+      case TYPE_ELEPHANT: {
+        const elephantMoves = [
+          { step1: [0, -1], diag1: [-1, -2], jump: [-2, -3] }, // 상좌
+          { step1: [0, -1], diag1: [1, -2],  jump: [2, -3] },  // 상우
+          { step1: [0, 1],  diag1: [-1, 2],  jump: [-2, 3] },  // 하좌
+          { step1: [0, 1],  diag1: [1, 2],   jump: [2, 3] },   // 하우
+          { step1: [-1, 0], diag1: [-2, -1], jump: [-3, -2] }, // 좌상
+          { step1: [-1, 0], diag1: [-2, 1],  jump: [-3, 2] },  // 좌하
+          { step1: [1, 0],  diag1: [2, -1],  jump: [3, -2] },  // 우상
+          { step1: [1, 0],  diag1: [2, 1],   jump: [3, 2] }    // 우하
+        ];
+        for (const em of elephantMoves) {
+          const b1x = x + em.step1[0], b1y = y + em.step1[1];
+          const b2x = x + em.diag1[0], b2y = y + em.diag1[1];
+          // 1차 멱 및 2차 멱 둘 다 비어있어야 함
+          if (this.isValidPos(b1x, b1y) && !this.board[b1y][b1x] &&
+              this.isValidPos(b2x, b2y) && !this.board[b2y][b2x]) {
+            addMove(x + em.jump[0], y + em.jump[1]);
+          }
+        }
+        break;
+      }
+    }
+
+    return moves;
+  }
+
+  // 가상 착수를 통해 '자신의 궁이 장군(Check)에 노출되지 않는' 절대 합법 수만 필터링
+  getLegalMoves(x, y) {
+    const rawMoves = this.getPossibleMoves(x, y);
+    const piece = this.board[y][x];
+    if (!piece || piece.team !== this.currentTurn) return [];
+
+    const legalMoves = [];
+    const team = piece.team;
+
+    for (const m of rawMoves) {
+      // 1. 가상 착수
+      const target = this.board[m.y][m.x];
+      this.board[m.y][m.x] = piece;
+      this.board[y][x] = null;
+
+      // 2. 이 수를 둔 직후 내 궁이 상대에게 장군(Check)을 받는지 검사
+      const inSelfCheck = this.isCheck(team);
+
+      // 3. 원래대로 복원
+      this.board[y][x] = piece;
+      this.board[m.y][m.x] = target;
+
+      // 내 궁이 안전해질 때(장군을 피하거나 막는 수)만 합법 수로 인정!
+      if (!inSelfCheck) {
+        legalMoves.push(m);
+      }
+    }
+    return legalMoves;
+  }
+
+  // 착수 실행
+  makeMove(fromX, fromY, toX, toY) {
+    const piece = this.board[fromY][fromX];
+    if (!piece) return false;
+
+    const target = this.board[toY][toX];
+
+    // 기보 스택에 현재 상태 푸시 (무르기용)
+    this.history.push({
+      from: { x: fromX, y: fromY },
+      to: { x: toX, y: toY },
+      movedPiece: { ...piece },
+      capturedPiece: target ? { ...target } : null,
+      prevTurn: this.currentTurn
+    });
+
+    // 이동 처리
+    this.board[toY][toX] = piece;
+    this.board[fromY][fromX] = null;
+    this.lastMove = { fromX, fromY, toX, toY };
+
+    // 턴 교체
+    this.currentTurn = this.currentTurn === TEAM_CHO ? TEAM_HAN : TEAM_CHO;
+
+    // 장군 여부 체크
+    this.inCheck = this.isCheck(this.currentTurn);
+
+    // 궁 포획 체크 (게임 종료)
+    if (target && target.type === TYPE_KING) {
+      this.isGameOver = true;
+      this.winner = piece.team;
+    }
+
+    return true;
+  }
+
+  // 한 수 무르기 (Undo)
+  undoMove() {
+    if (this.history.length === 0) return false;
+
+    const last = this.history.pop();
+    this.board[last.from.y][last.from.x] = last.movedPiece;
+    this.board[last.to.y][last.to.x] = last.capturedPiece;
+    this.currentTurn = last.prevTurn;
+    this.isGameOver = false;
+    this.winner = null;
+
+    if (this.history.length > 0) {
+      const prev = this.history[this.history.length - 1];
+      this.lastMove = { fromX: prev.from.x, fromY: prev.from.y, toX: prev.to.x, toY: prev.to.y };
+    } else {
+      this.lastMove = null;
+    }
+
+    this.inCheck = this.isCheck(this.currentTurn);
+    return true;
+  }
+
+  // 특정 진영의 장군 여부 체크
+  isCheck(team) {
+    // team의 궁 위치 찾기
+    let kingPos = null;
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const p = this.board[y][x];
+        if (p && p.team === team && p.type === TYPE_KING) {
+          kingPos = { x, y };
+          break;
+        }
+      }
+      if (kingPos) break;
+    }
+    if (!kingPos) return false;
+
+    // 상대방의 모든 기물이 kingPos로 공격 가능한지 검사
+    const oppTeam = team === TEAM_CHO ? TEAM_HAN : TEAM_CHO;
+    const tempTurn = this.currentTurn;
+    this.currentTurn = oppTeam;
+
+    let checkFound = false;
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const p = this.board[y][x];
+        if (p && p.team === oppTeam) {
+          const moves = this.getPossibleMoves(x, y);
+          if (moves.some(m => m.x === kingPos.x && m.y === kingPos.y)) {
+            checkFound = true;
+            break;
+          }
+        }
+      }
+      if (checkFound) break;
+    }
+
+    this.currentTurn = tempTurn;
+    return checkFound;
+  }
+
+  // 점수 계산 (초 vs 한)
+  calculateScores() {
+    let choScore = 0;
+    let hanScore = 1.5; // 한(漢) 덤 1.5점
+
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const p = this.board[y][x];
+        if (p) {
+          const score = PIECE_SCORES[p.type] || 0;
+          if (p.team === TEAM_CHO) choScore += score;
+          else hanScore += score;
+        }
+      }
+    }
+    return { cho: choScore, han: hanScore };
+  }
+}
+
+// --- Alpha-Beta AI 및 훈수 엔진 (2단계 고도화: Zobrist 전치테이블, SEE 정적교환평가, 아마추어 정밀 등급) ---
+class JanggiAI {
+  constructor(game) {
+    this.game = game;
+    // 기물 기본 가치 (밀리점수 체계)
+    this.pieceValues = {
+      [TYPE_KING]: 20000,
+      [TYPE_CAR]: 1300,
+      [TYPE_CANNON]: 700,
+      [TYPE_HORSE]: 500,
+      [TYPE_ELEPHANT]: 300,
+      [TYPE_ADVISOR]: 320,
+      [TYPE_PAWN]: 200
+    };
+
+    // 졸/병 위치 가중치 (전진 및 중앙 장악 보너스)
+    this.pawnPST = [
+      [ 0,  0,  0,  0,  0,  0,  0,  0,  0],
+      [15, 25, 35, 45, 55, 45, 35, 25, 15],
+      [25, 35, 50, 70, 80, 70, 50, 35, 25],
+      [35, 45, 65, 90,100, 90, 65, 45, 35],
+      [45, 55, 75,105,120,105, 75, 55, 45],
+      [55, 65, 85,115,130,115, 85, 65, 55],
+      [65, 75, 95,125,140,125, 95, 75, 65],
+      [75, 85,105,135,150,135,105, 85, 75],
+      [85, 95,115,145,160,145,115, 95, 85],
+      [95,105,125,155,170,155,125,105, 95]
+    ];
+
+    // 마(馬) 위치 가중치 (중앙 기동력)
+    this.horsePST = [
+      [-20,-10,  0,  5,  5,  5,  0,-10,-20],
+      [-10, 10, 20, 25, 25, 25, 20, 10,-10],
+      [  0, 20, 35, 45, 50, 45, 35, 20,  0],
+      [  5, 25, 45, 60, 65, 60, 45, 25,  5],
+      [  5, 30, 50, 70, 75, 70, 50, 30,  5],
+      [  5, 30, 50, 70, 75, 70, 50, 30,  5],
+      [  5, 25, 45, 60, 65, 60, 45, 25,  5],
+      [  0, 20, 35, 45, 50, 45, 35, 20,  0],
+      [-10, 10, 20, 25, 25, 25, 20, 10,-10],
+      [-20,-10,  0,  5,  5,  5,  0,-10,-20]
+    ];
+
+    // 2단계 고도화: Zobrist 해싱 테이블 & 전치 테이블(Transposition Table) 초기화
+    this.initZobrist();
+    this.tt = new Map(); // 전치 테이블 캐시 (국면 해시 -> { depth, score, flag, bestMove })
+    this.killerMoves = Array.from({ length: 6 }, () => [null, null]); // 깊이별 킬러 무브
+  }
+
+  // 32비트 무작위 정수 생성기
+  random32() {
+    return (Math.random() * 0xFFFFFFFF) >>> 0;
+  }
+
+  // Zobrist Hashing 키 테이블 생성 (10행 9열 x 14종 기물)
+  initZobrist() {
+    this.zobristTable = [];
+    const pieceTypes = [TYPE_KING, TYPE_CAR, TYPE_CANNON, TYPE_HORSE, TYPE_ELEPHANT, TYPE_ADVISOR, TYPE_PAWN];
+    for (let y = 0; y < ROWS; y++) {
+      this.zobristTable[y] = [];
+      for (let x = 0; x < COLS; x++) {
+        this.zobristTable[y][x] = {};
+        for (const t of pieceTypes) {
+          this.zobristTable[y][x][`${TEAM_CHO}_${t}`] = this.random32();
+          this.zobristTable[y][x][`${TEAM_HAN}_${t}`] = this.random32();
+        }
+      }
+    }
+    this.zobristTurnKey = this.random32();
+  }
+
+  // 현재 보드의 Zobrist Hash 계산
+  computeBoardHash(board, currentTurn) {
+    let hash = 0;
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const p = board[y][x];
+        if (p) {
+          const key = `${p.team}_${p.type}`;
+          hash ^= this.zobristTable[y][x][key];
+        }
+      }
+    }
+    if (currentTurn === TEAM_CHO) {
+      hash ^= this.zobristTurnKey;
+    }
+    return hash >>> 0;
+  }
+
+  // 2단계 고도화: 정적 교환 평가 (SEE - Static Exchange Evaluation)
+  // 목적: 공격하려는 칸(toX, toY)에서 기물 교환이 일어났을 때 아군의 손익을 시뮬레이션
+  evaluateSEE(move, team) {
+    if (!move.captured) return 0;
+    const oppTeam = team === TEAM_CHO ? TEAM_HAN : TEAM_CHO;
+    const targetVal = this.pieceValues[move.captured.type] || 0;
+    const attackerVal = this.pieceValues[move.piece.type] || 0;
+
+    // 가상으로 착수하여 상대가 그 칸을 공격할 수 있는지 확인
+    this.game.board[move.toY][move.toX] = move.piece;
+    this.game.board[move.fromY][move.fromX] = null;
+
+    const oppRawMoves = this.getAllRawMoves(oppTeam);
+    const defenders = oppRawMoves.filter(m => m.toX === move.toX && m.toY === move.toY);
+
+    this.game.board[move.fromY][move.fromX] = move.piece;
+    this.game.board[move.toY][move.toX] = move.captured;
+
+    // 상대의 방어/반격 기물이 없으면 온전한 기물 획득
+    if (defenders.length === 0) {
+      return targetVal;
+    }
+
+    // 상대 반격 기물 중 가장 가치가 낮은 기물(Least Valuable Attacker)로 반격당함
+    defenders.sort((a, b) => (this.pieceValues[a.piece.type] || 0) - (this.pieceValues[b.piece.type] || 0));
+    const leastOppVal = this.pieceValues[defenders[0].piece.type] || 0;
+
+    // 교환 손익: (잡은 기물 가치) - (잡히는 내 기물 가치)
+    return targetVal - attackerVal;
+  }
+
+  // 착수 순서 정렬 (Move Ordering: TT Best Move > SEE 양호 캡처 > 장군 > 킬러 무브 > 일반)
+  orderMoves(moves, team, depth = 0, ttBestMove = null) {
+    const oppTeam = team === TEAM_CHO ? TEAM_HAN : TEAM_CHO;
+    return moves.sort((a, b) => {
+      // 1. 전치 테이블에 기록된 최선의 수(TT Best Move) 최우선
+      if (ttBestMove) {
+        const isA = a.fromX === ttBestMove.fromX && a.fromY === ttBestMove.fromY && a.toX === ttBestMove.toX && a.toY === ttBestMove.toY;
+        const isB = b.fromX === ttBestMove.fromX && b.fromY === ttBestMove.fromY && b.toX === ttBestMove.toX && b.toY === ttBestMove.toY;
+        if (isA) return -100000;
+        if (isB) return 100000;
+      }
+
+      let scoreA = 0;
+      let scoreB = 0;
+
+      // 2. 상대 기물 포획 및 SEE(정적 교환 평가) 가중치
+      if (a.captured) {
+        const seeA = this.evaluateSEE(a, team);
+        scoreA += (seeA >= 0 ? 5000 + seeA : -2000 + seeA);
+      }
+      if (b.captured) {
+        const seeB = this.evaluateSEE(b, team);
+        scoreB += (seeB >= 0 ? 5000 + seeB : -2000 + seeB);
+      }
+
+      // 3. 장군(Check) 공격 가중치 (+1500점)
+      this.game.board[a.toY][a.toX] = a.piece;
+      this.game.board[a.fromY][a.fromX] = null;
+      if (this.game.isCheck(oppTeam)) scoreA += 1500;
+      this.game.board[a.fromY][a.fromX] = a.piece;
+      this.game.board[a.toY][a.toX] = a.captured;
+
+      this.game.board[b.toY][b.toX] = b.piece;
+      this.game.board[b.fromY][b.fromX] = null;
+      if (this.game.isCheck(oppTeam)) scoreB += 1500;
+      this.game.board[b.fromY][b.fromX] = b.piece;
+      this.game.board[b.toY][b.toX] = b.captured;
+
+      // 4. 킬러 무브(Killer Move) 가산점
+      if (depth < this.killerMoves.length) {
+        const [k1, k2] = this.killerMoves[depth];
+        if (k1 && a.fromX === k1.fromX && a.fromY === k1.fromY && a.toX === k1.toX && a.toY === k1.toY) scoreA += 800;
+        if (k2 && a.fromX === k2.fromX && a.fromY === k2.fromY && a.toX === k2.toX && a.toY === k2.toY) scoreA += 400;
+        if (k1 && b.fromX === k1.fromX && b.fromY === k1.fromY && b.toX === k1.toX && b.toY === k1.toY) scoreB += 800;
+        if (k2 && b.fromX === k2.fromX && b.fromY === k2.fromY && b.toX === k2.toX && b.toY === k2.toY) scoreB += 400;
+      }
+
+      // 5. 중앙 전진 가산점
+      scoreA += (4 - Math.abs(a.toX - 4)) * 10;
+      scoreB += (4 - Math.abs(b.toX - 4)) * 10;
+
+      return scoreB - scoreA;
+    });
+  }
+
+  // 최적의 한 수 계산 (2단계 고도화: 어르신 맞춤형 초급 / 중급 / 고급)
+  getBestMove(team, level = 'easy') {
+    // 반드시 '진짜 합법 수(멍군 검사 포함)'만 획득!
+    let moves = this.getAllLegalMoves(team);
+    if (moves.length === 0) return null; // 둘 수가 없음(외통수/기권)
+
+    // 초반 오프닝 정석 수(Opening Book) 탐색 (대국 시작 1~8수)
+    const turnCount = this.game.history.length;
+    if (turnCount < (level === 'easy' ? 4 : 8)) {
+      const openingMove = this.getOpeningMove(team, moves);
+      if (openingMove) return openingMove;
+    }
+
+    // [초급: 10급 ~ 6급] - 어르신께서 이기는 즐거움을 느끼시는 단계
+    // 기본 장기 룰과 멍군을 충실히 지키되, 가끔 2~3번째 양호한 수를 두어 어르신께 기회를 열어드림
+    if (level === 'easy') {
+      let candidateMoves = [];
+      for (const m of moves) {
+        this.game.board[m.toY][m.toX] = m.piece;
+        this.game.board[m.fromY][m.fromX] = null;
+
+        let score = this.evaluateMoveSafety(m, team);
+        if (m.captured) score += (this.pieceValues[m.captured.type] || 0) * 1.2;
+
+        const oppTeam = team === TEAM_CHO ? TEAM_HAN : TEAM_CHO;
+        if (this.game.isCheck(oppTeam)) score += 400;
+
+        this.game.board[m.fromY][m.fromX] = m.piece;
+        this.game.board[m.toY][m.toX] = m.captured;
+
+        candidateMoves.push({ move: m, score });
+      }
+
+      candidateMoves.sort((a, b) => b.score - a.score);
+      // 70%는 최선수, 30%는 2번째 수를 두어 어르신에게 활로 제공
+      if (candidateMoves.length > 1 && Math.random() < 0.3) {
+        return candidateMoves[1].move;
+      }
+      return candidateMoves[0].move;
+    }
+
+    // [중급: 5급 ~ 2급] - 동네 경로당/복지관 장기 고수 수준 (깊이 3수)
+    // [고급: 아마 1급] - 기원 1급 수준의 전치테이블 & SEE 기반 깊은 수읽기 (깊이 4수)
+    const searchDepth = (level === 'hard') ? 4 : 3;
+
+    // 전치 테이블 메모리 관리 (50,000개 초과 시 절반 정리)
+    if (this.tt.size > 50000) this.tt.clear();
+
+    const currentHash = this.computeBoardHash(this.game.board, team);
+    const ttEntry = this.tt.get(currentHash);
+    const ttBestMove = ttEntry ? ttEntry.bestMove : null;
+
+    moves = this.orderMoves(moves, team, searchDepth, ttBestMove);
+
+    let bestScore = team === TEAM_CHO ? -Infinity : Infinity;
+    let bestMove = moves[0];
+
+    for (const move of moves) {
+      this.game.board[move.toY][move.toX] = move.piece;
+      this.game.board[move.fromY][move.fromX] = null;
+
+      const score = this.alphaBeta(searchDepth - 1, -Infinity, Infinity, team !== TEAM_CHO, level, 1);
+
+      this.game.board[move.fromY][move.fromX] = move.piece;
+      this.game.board[move.toY][move.toX] = move.captured;
+
+      if (team === TEAM_CHO) {
+        if (score > bestScore) {
+          bestScore = score;
+          bestMove = move;
+        }
+      } else {
+        if (score < bestScore) {
+          bestScore = score;
+          bestMove = move;
+        }
+      }
+    }
+
+    // 최적 수를 전치 테이블에 저장
+    this.tt.set(currentHash, { depth: searchDepth, score: bestScore, bestMove });
+    return bestMove;
+  }
+
+  // 오프닝 정석 수(Opening Book) 패턴 추출
+  getOpeningMove(team, moves) {
+    if (team === TEAM_CHO) {
+      // 1. 면포 안착: 포(包)를 궁성 중앙(x=4, y=2)으로 이동하는 수가 있으면 최우선 실행!
+      const cannonToCenter = moves.find(m => m.piece.type === TYPE_CANNON && m.toX === 4 && m.toY === 2);
+      if (cannonToCenter) return cannonToCenter;
+
+      // 2. 귀마 진출: 마(馬)를 중앙으로 진출시키는 수 (x=2 or 6, y=2)
+      const horseAdvance = moves.find(m => m.piece.type === TYPE_HORSE && (m.toX === 2 || m.toX === 6) && m.toY === 2);
+      if (horseAdvance) return horseAdvance;
+
+      // 3. 차길 열기: 졸(卒)을 안쪽으로 모으는 합졸 수
+      const pawnOpen = moves.find(m => m.piece.type === TYPE_PAWN && (m.toX === 1 || m.toX === 7) && m.toY === 3);
+      if (pawnOpen) return pawnOpen;
+    }
+    return null;
+  }
+
+  // Alpha-Beta 재귀 탐색 (2단계 전치 테이블 및 킬러 무브 연동)
+  alphaBeta(depth, alpha, beta, isMaximizing, level, ply = 0) {
+    const team = isMaximizing ? TEAM_CHO : TEAM_HAN;
+
+    // 1. 전치 테이블(Transposition Table) 조회
+    const hash = this.computeBoardHash(this.game.board, team);
+    const ttEntry = this.tt.get(hash);
+    if (ttEntry && ttEntry.depth >= depth && level === 'hard') {
+      if (ttEntry.flag === 'EXACT') return ttEntry.score;
+      if (ttEntry.flag === 'LOWERBOUND' && ttEntry.score > alpha) alpha = ttEntry.score;
+      if (ttEntry.flag === 'UPPERBOUND' && ttEntry.score < beta) beta = ttEntry.score;
+      if (alpha >= beta) return ttEntry.score;
+    }
+
+    // 깊이 한계 도달 시 국면 정밀 평가
+    if (depth <= 0) {
+      return this.evaluatePosition(level);
+    }
+
+    let moves = this.getAllLegalMoves(team);
+    // 둘 수 있는 합법 수가 없다면 외통수(Checkmate) 판정!
+    if (moves.length === 0) {
+      return isMaximizing ? -99999 + ply : 99999 - ply;
+    }
+
+    const ttBestMove = ttEntry ? ttEntry.bestMove : null;
+    moves = this.orderMoves(moves, team, ply, ttBestMove);
+
+    let bestMoveAtThisNode = moves[0];
+    let originalAlpha = alpha;
+
+    if (isMaximizing) {
+      let maxEval = -Infinity;
+      for (const m of moves) {
+        this.game.board[m.toY][m.toX] = m.piece;
+        this.game.board[m.fromY][m.fromX] = null;
+
+        const evalScore = this.alphaBeta(depth - 1, alpha, beta, false, level, ply + 1);
+
+        this.game.board[m.fromY][m.fromX] = m.piece;
+        this.game.board[m.toY][m.toX] = m.captured;
+
+        if (evalScore > maxEval) {
+          maxEval = evalScore;
+          bestMoveAtThisNode = m;
+        }
+        alpha = Math.max(alpha, evalScore);
+        if (beta <= alpha) {
+          // 킬러 무브 기록 (기물 미포획 수인 경우)
+          if (!m.captured && ply < this.killerMoves.length) {
+            this.killerMoves[ply][1] = this.killerMoves[ply][0];
+            this.killerMoves[ply][0] = m;
+          }
+          break; // Beta Cutoff
+        }
+      }
+
+      // 전치 테이블 저장
+      let flag = 'EXACT';
+      if (maxEval <= originalAlpha) flag = 'UPPERBOUND';
+      else if (maxEval >= beta) flag = 'LOWERBOUND';
+      this.tt.set(hash, { depth, score: maxEval, flag, bestMove: bestMoveAtThisNode });
+
+      return maxEval;
+    } else {
+      let minEval = Infinity;
+      for (const m of moves) {
+        this.game.board[m.toY][m.toX] = m.piece;
+        this.game.board[m.fromY][m.fromX] = null;
+
+        const evalScore = this.alphaBeta(depth - 1, alpha, beta, true, level, ply + 1);
+
+        this.game.board[m.fromY][m.fromX] = m.piece;
+        this.game.board[m.toY][m.toX] = m.captured;
+
+        if (evalScore < minEval) {
+          minEval = evalScore;
+          bestMoveAtThisNode = m;
+        }
+        minEval = Math.min(minEval, evalScore);
+        beta = Math.min(beta, evalScore);
+        if (beta <= alpha) {
+          if (!m.captured && ply < this.killerMoves.length) {
+            this.killerMoves[ply][1] = this.killerMoves[ply][0];
+            this.killerMoves[ply][0] = m;
+          }
+          break; // Alpha Cutoff
+        }
+      }
+
+      let flag = 'EXACT';
+      if (minEval <= originalAlpha) flag = 'UPPERBOUND';
+      else if (minEval >= beta) flag = 'LOWERBOUND';
+      this.tt.set(hash, { depth, score: minEval, flag, bestMove: bestMoveAtThisNode });
+
+      return minEval;
+    }
+  }
+
+  // 기물 안전도 및 Blunder 회피 평가
+  evaluateMoveSafety(move, team) {
+    const oppTeam = team === TEAM_CHO ? TEAM_HAN : TEAM_CHO;
+    const oppMoves = this.getAllRawMoves(oppTeam);
+    const isAttacked = oppMoves.some(om => om.toX === move.toX && om.toY === move.toY);
+    if (isAttacked) {
+      return -(this.pieceValues[move.piece.type] || 0) * 1.2;
+    }
+    return 20;
+  }
+
+  // 국면 정밀 평가 함수 (기물가치 + 위치가치 + 궁성안전도 + 장군 위협 + 기물 보호망)
+  evaluatePosition(level) {
+    let score = 0;
+    const isHanCheck = this.game.isCheck(TEAM_HAN);
+    const isChoCheck = this.game.isCheck(TEAM_CHO);
+
+    // 상대 궁 장군 상태 시 큰 가산점, 내 궁 장군 상태 시 큰 감점
+    if (isHanCheck) score += 700;
+    if (isChoCheck) score -= 700;
+
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const p = this.game.board[y][x];
+        if (!p) continue;
+
+        let val = this.pieceValues[p.type] || 0;
+
+        // 위치 보너스 (PST)
+        if (p.type === TYPE_PAWN) {
+          const pstY = p.team === TEAM_CHO ? y : (9 - y);
+          val += this.pawnPST[pstY][x];
+        } else if (p.type === TYPE_HORSE) {
+          const pstY = p.team === TEAM_CHO ? y : (9 - y);
+          val += this.horsePST[pstY][x];
+        } else if (p.type === TYPE_CAR) {
+          // 차(車)의 활로: 전방이 뚫려있고 전선에 침투할수록 강력함
+          val += (Math.abs(4 - x) < 3 ? 40 : 20);
+          if ((p.team === TEAM_CHO && y >= 6) || (p.team === TEAM_HAN && y <= 3)) {
+            val += 70; // 상대 진영 침투 보너스
+          }
+        } else if (p.type === TYPE_CANNON) {
+          // 면포(중앙 궁성 앞 x=4, y=2 또는 y=7) 보너스
+          if (x === 4 && (y === 2 || y === 7)) val += 80;
+        } else if (p.type === TYPE_KING || p.type === TYPE_ADVISOR) {
+          // 궁성 내부 수비 안정도
+          val += 40;
+        }
+
+        if (p.team === TEAM_CHO) score += val;
+        else score -= val;
+      }
+    }
+    return score;
+  }
+
+  // '진짜 합법 수(멍군 검사 포함)'만 반환하는 전역 수집기
+  getAllLegalMoves(team) {
+    const moves = [];
+    const savedTurn = this.game.currentTurn;
+    this.game.currentTurn = team;
+
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const p = this.game.board[y][x];
+        if (p && p.team === team) {
+          // getLegalMoves 호출로 장군 상태 시 멍군 불능 수는 100% 원천 배제!
+          const pm = this.game.getLegalMoves(x, y);
+          for (const m of pm) {
+            moves.push({
+              fromX: x, fromY: y,
+              toX: m.x, toY: m.y,
+              piece: p,
+              captured: m.captured
+            });
+          }
+        }
+      }
+    }
+
+    this.game.currentTurn = savedTurn;
+    return moves;
+  }
+
+  // 단순 기하학적 공격 경로 수집 (안전도 검사용)
+  getAllRawMoves(team) {
+    const moves = [];
+    const savedTurn = this.game.currentTurn;
+    this.game.currentTurn = team;
+
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const p = this.game.board[y][x];
+        if (p && p.team === team) {
+          const pm = this.game.getPossibleMoves(x, y);
+          for (const m of pm) {
+            moves.push({
+              fromX: x, fromY: y,
+              toX: m.x, toY: m.y,
+              piece: p,
+              captured: m.captured
+            });
+          }
+        }
+      }
+    }
+
+    this.game.currentTurn = savedTurn;
+    return moves;
+  }
+}
+
+// --- 오디오 & 음성 시스템 ---
+class SoundSystem {
+  constructor() {
+    this.enabled = true;
+    this.audioCtx = null;
+  }
+
+  initAudio() {
+    if (!this.audioCtx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) this.audioCtx = new AudioContext();
+    }
+  }
+
+  // 묵직한 원목 장기돌 타격음 합성
+  playPieceDrop() {
+    if (!this.enabled) return;
+    this.initAudio();
+    if (!this.audioCtx) return;
+
+    try {
+      const t = this.audioCtx.currentTime;
+      const osc = this.audioCtx.createOscillator();
+      const gain = this.audioCtx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(140, t);
+      osc.frequency.exponentialRampToValueAtTime(30, t + 0.12);
+
+      gain.gain.setValueAtTime(0.8, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.12);
+
+      osc.connect(gain);
+      gain.connect(this.audioCtx.destination);
+
+      osc.start(t);
+      osc.stop(t + 0.13);
+    } catch (e) {
+      console.log('Audio play error:', e);
+    }
+
+    // 모바일 진동 (햅틱 40ms)
+    if (navigator.vibrate) {
+      try { navigator.vibrate(35); } catch (e) {}
+    }
+  }
+
+  // 한국어 음성 안내 (TTS)
+  speak(text) {
+    if (!this.enabled) return;
+    // 1. 네이티브 안드로이드 TTS 브릿지 우선 사용
+    if (window.AndroidBridge && typeof window.AndroidBridge.speak === 'function') {
+      try {
+        window.AndroidBridge.speak(text);
+        return;
+      } catch (e) {
+        console.log('AndroidBridge speak error:', e);
+      }
+    }
+    // 2. 브라우저 Web Speech API 사용
+    if (window.speechSynthesis) {
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'ko-KR';
+        utterance.rate = 0.95; // 어르신을 위해 약간 또렷하고 차분한 속도
+        utterance.pitch = 1.0;
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        console.log('TTS speak error:', e);
+      }
+    }
+  }
+}
+
+// ============================================================
+// UI & 컨트롤러 메인 로직
+// ============================================================
+const game = new JanggiGame();
+const ai = new JanggiAI(game);
+const sound = new SoundSystem();
+
+// 사용자 설정 상태
+let fontMode = 'ko'; // 'ko' (한글) or 'han' (한자)
+let moveConfirmMode = true; // 2단계 확인 착수 여부
+let selectedPiecePos = null;
+let activePossibleMoves = [];
+let pendingMove = null;
+let hintArrow = null; // 훈수 화살표
+
+// DOM 요소 캐시
+const canvas = document.getElementById('janggi-canvas');
+const ctx = canvas.getContext('2d');
+const boardContainer = document.getElementById('board-container');
+
+const viewHome = document.getElementById('view-home');
+const viewGame = document.getElementById('view-game');
+
+const headerModeText = document.getElementById('header-mode-text');
+const headerTurnBadge = document.getElementById('header-turn-badge');
+const headerTurnIcon = document.getElementById('header-turn-icon');
+const headerTurnText = document.getElementById('header-turn-text');
+const guideText = document.getElementById('guide-text');
+const infoChoScore = document.getElementById('info-cho-score');
+const infoHanScore = document.getElementById('info-han-score');
+
+// 모달들
+const modalConfirm = document.getElementById('modal-confirm-move');
+const confirmMoveDesc = document.getElementById('confirm-move-desc');
+const modalFormation = document.getElementById('modal-formation');
+const modalGameOver = document.getElementById('modal-game-over');
+const gameOverTitle = document.getElementById('game-over-title');
+const gameOverDesc = document.getElementById('game-over-desc');
+const modalSettings = document.getElementById('modal-settings');
+
+// 캔버스 크기 계산 변수
+let cellW = 0;
+let cellH = 0;
+let offsetX = 0;
+let offsetY = 0;
+
+// 화면 크기에 맞춘 캔버스 리사이즈
+function resizeCanvas() {
+  const rect = boardContainer.getBoundingClientRect();
+  const pad = 12;
+  const availW = rect.width - pad * 2;
+  const availH = rect.height - pad * 2;
+
+  // 장기판 비율 9:10
+  const ratio = 9 / 10;
+  let targetW = availW;
+  let targetH = targetW / ratio;
+
+  if (targetH > availH) {
+    targetH = availH;
+    targetW = targetH * ratio;
+  }
+
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = targetW * dpr;
+  canvas.height = targetH * dpr;
+  canvas.style.width = `${targetW}px`;
+  canvas.style.height = `${targetH}px`;
+
+  ctx.resetTransform();
+  ctx.scale(dpr, dpr);
+
+  cellW = targetW / 9;
+  cellH = targetH / 10;
+  offsetX = cellW / 2;
+  offsetY = cellH / 2;
+
+  renderBoard();
+}
+
+window.addEventListener('resize', resizeCanvas);
+
+// --- 보드 렌더링 함수 ---
+function renderBoard() {
+  const w = parseFloat(canvas.style.width);
+  const h = parseFloat(canvas.style.height);
+
+  // 1. 원목 바탕 칠하기
+  ctx.fillStyle = '#E5C384';
+  ctx.fillRect(0, 0, w, h);
+
+  // 2. 외곽 테두리 및 그림자
+  ctx.strokeStyle = '#52310C';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(offsetX, offsetY, cellW * 8, cellH * 9);
+
+  // 3. 내부 격자선
+  ctx.lineWidth = 1.8;
+  ctx.strokeStyle = '#6E4314';
+
+  // 가로선 10개
+  for (let r = 0; r < ROWS; r++) {
+    const y = offsetY + r * cellH;
+    ctx.beginPath();
+    ctx.moveTo(offsetX, y);
+    ctx.lineTo(offsetX + 8 * cellW, y);
+    ctx.stroke();
+  }
+
+  // 세로선 9개 (중앙 강 영역 통과)
+  for (let c = 0; c < COLS; c++) {
+    const x = offsetX + c * cellW;
+    ctx.beginPath();
+    ctx.moveTo(x, offsetY);
+    ctx.lineTo(x, offsetY + 9 * cellH);
+    ctx.stroke();
+  }
+
+  // 4. 궁성(宮城) 대각선
+  const drawPalaceDiagonal = (yStart) => {
+    const x1 = offsetX + 3 * cellW, y1 = offsetY + yStart * cellH;
+    const x2 = offsetX + 5 * cellW, y2 = offsetY + (yStart + 2) * cellH;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+    ctx.moveTo(x2, y1); ctx.lineTo(x1, y2);
+    ctx.stroke();
+  };
+  drawPalaceDiagonal(0); // 초 궁성
+  drawPalaceDiagonal(7); // 한 궁성
+
+  // 5. 직전 착수 위치 하이라이트
+  if (game.lastMove) {
+    const lm = game.lastMove;
+    ctx.fillStyle = 'rgba(217, 119, 6, 0.28)';
+    ctx.fillRect(offsetX + lm.fromX * cellW - cellW * 0.45, offsetY + lm.fromY * cellH - cellH * 0.45, cellW * 0.9, cellH * 0.9);
+    ctx.fillStyle = 'rgba(217, 119, 6, 0.45)';
+    ctx.fillRect(offsetX + lm.toX * cellW - cellW * 0.45, offsetY + lm.toY * cellH - cellH * 0.45, cellW * 0.9, cellH * 0.9);
+  }
+
+  // 6. 이동 가능 위치 가이드 마커 렌더링
+  if (activePossibleMoves.length > 0) {
+    for (const m of activePossibleMoves) {
+      const cx = offsetX + m.x * cellW;
+      const cy = offsetY + m.y * cellH;
+
+      ctx.beginPath();
+      ctx.arc(cx, cy, Math.min(cellW, cellH) * 0.36, 0, Math.PI * 2);
+
+      if (m.captured) {
+        // 상대 기물이 있는 곳: 비단 홍옥색 링
+        ctx.fillStyle = 'rgba(220, 38, 38, 0.35)';
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#DC2626';
+        ctx.stroke();
+      } else {
+        // 빈 곳: 황금빛 점
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.38)';
+        ctx.fill();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = '#059669';
+        ctx.stroke();
+      }
+    }
+  }
+
+  // 7. 훈수 화살표 렌더링
+  if (hintArrow) {
+    const x1 = offsetX + hintArrow.fromX * cellW;
+    const y1 = offsetY + hintArrow.fromY * cellH;
+    const x2 = offsetX + hintArrow.toX * cellW;
+    const y2 = offsetY + hintArrow.toY * cellH;
+
+    ctx.save();
+    ctx.strokeStyle = '#F59E0B';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+
+    // 화살표 머리
+    const angle = Math.atan2(y2 - y1, x2 - x1);
+    ctx.fillStyle = '#D97706';
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - 18 * Math.cos(angle - Math.PI / 6), y2 - 18 * Math.sin(angle - Math.PI / 6));
+    ctx.lineTo(x2 - 18 * Math.cos(angle + Math.PI / 6), y2 - 18 * Math.sin(angle + Math.PI / 6));
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // 8. 기물(Pieces) 렌더링
+  const is2pMode = game.gameMode === '2p';
+  const pieceRadius = Math.min(cellW, cellH) * 0.44; // 초대형 크기!
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const piece = game.board[r][c];
+      if (!piece) continue;
+
+      const px = offsetX + c * cellW;
+      const py = offsetY + r * cellH;
+      const isSelected = selectedPiecePos && selectedPiecePos.x === c && selectedPiecePos.y === r;
+
+      ctx.save();
+      ctx.translate(px, py);
+
+      // 2인용 모드 시 초(楚) 기물 180도 회전 (마주 앉은 어르신 시각)
+      if (is2pMode && piece.team === TEAM_CHO) {
+        ctx.rotate(Math.PI);
+      }
+
+      // 선택된 기물 띄움 효과
+      if (isSelected) {
+        ctx.shadowColor = '#F59E0B';
+        ctx.shadowBlur = 18;
+      } else {
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+        ctx.shadowBlur = 6;
+        ctx.shadowOffsetY = 3;
+      }
+
+      // 8각형 원목 기물 외형 그리기 (궁: 100%, 차/포/마/상: 90%, 졸/병/사: 78%로 적당히 축소)
+      let sizeScale = 0.90;
+      if (piece.type === TYPE_KING) {
+        sizeScale = 1.0;
+      } else if (piece.type === TYPE_ADVISOR || piece.type === TYPE_PAWN) {
+        sizeScale = 0.78; // 졸, 병, 사 기물의 크기를 적당히 작게 줄임
+      }
+      const r_out = pieceRadius * sizeScale;
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const a = (i * Math.PI) / 4 + Math.PI / 8;
+        const x = r_out * Math.cos(a);
+        const y = r_out * Math.sin(a);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+
+      // 기물 바탕색 (고급 원목 질감)
+      ctx.fillStyle = piece.team === TEAM_CHO ? '#ECFDF5' : '#FEF2F2';
+      ctx.fill();
+
+      // 기물 테두리 (초록 또는 빨강)
+      ctx.lineWidth = 3.5;
+      ctx.strokeStyle = piece.team === TEAM_CHO ? '#047857' : '#B91C1C';
+      ctx.stroke();
+
+      // 내부 기물 음영 링
+      ctx.beginPath();
+      ctx.arc(0, 0, r_out * 0.78, 0, Math.PI * 2);
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = piece.team === TEAM_CHO ? '#A7F3D0' : '#FECACA';
+      ctx.stroke();
+
+      // 기물 글자 렌더링
+      const name = PIECE_NAMES[fontMode][piece.team][piece.type];
+      ctx.shadowBlur = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.fillStyle = piece.team === TEAM_CHO ? '#064E3B' : '#991B1B';
+      ctx.font = `900 ${r_out * 1.05}px 'Noto Sans KR', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(name, 0, 1);
+
+      ctx.restore();
+    }
+  }
+
+  // 9. 점수 및 상태 텍스트 갱신
+  updateStatusUI();
+}
+
+// 상태 UI 갱신
+function updateStatusUI() {
+  const scores = game.calculateScores();
+  infoChoScore.textContent = `${scores.cho.toFixed(1)}점`;
+  infoHanScore.textContent = `${scores.han.toFixed(1)}점`;
+
+  const isHan = game.currentTurn === TEAM_HAN;
+  headerTurnIcon.textContent = isHan ? '🔴' : '🟢';
+  headerTurnText.textContent = isHan ? '한(어르신) 차례' : '초(상대방) 차례';
+
+  if (game.isGameOver) {
+    const winnerName = game.winner === TEAM_HAN ? '어르신 (漢)' : '상대방 (楚)';
+    guideText.textContent = `축하드립니다! [${winnerName}] 승리!`;
+    guideText.classList.add('highlight');
+  } else if (game.inCheck) {
+    guideText.textContent = `⚠️ 장군입니다! 궁을 안전하게 피하세요!`;
+    guideText.classList.add('highlight');
+  } else {
+    guideText.classList.remove('highlight');
+    if (isHan) {
+      guideText.textContent = selectedPiecePos ? '이동하실 위치(녹색 원)를 눌러주세요.' : '어르신 차례입니다. 기물을 눌러주세요.';
+    } else {
+      guideText.textContent = game.gameMode === 'ai' ? '상대방 AI가 다음 수를 생각하고 있습니다...' : '상대방(초) 차례입니다.';
+    }
+  }
+}
+
+// --- 보드 클릭/터치 이벤트 처리 ---
+canvas.addEventListener('click', (e) => {
+  if (game.isGameOver) return;
+  if (game.gameMode === 'ai' && game.currentTurn === TEAM_CHO) return; // AI 생각 중
+
+  const rect = canvas.getBoundingClientRect();
+  const clickX = e.clientX - rect.left;
+  const clickY = e.clientY - rect.top;
+
+  // 가장 가까운 교차점 찾기
+  const col = Math.round((clickX - offsetX) / cellW);
+  const row = Math.round((clickY - offsetY) / cellH);
+
+  if (!game.isValidPos(col, row)) return;
+
+  hintArrow = null; // 훈수 화살표 초기화
+
+  // 1. 이미 기물이 선택된 상태에서 목적지를 누른 경우
+  if (selectedPiecePos) {
+    const targetMove = activePossibleMoves.find(m => m.x === col && m.y === row);
+    if (targetMove) {
+      // 합법적 이동!
+      if (moveConfirmMode) {
+        // 2단계 확인 팝업 모드
+        pendingMove = {
+          fromX: selectedPiecePos.x, fromY: selectedPiecePos.y,
+          toX: col, toY: row
+        };
+        const piece = game.board[selectedPiecePos.y][selectedPiecePos.x];
+        const pieceName = PIECE_NAMES[fontMode][piece.team][piece.type];
+        confirmMoveDesc.textContent = `[${pieceName}] 기물을 이 자리에 두시겠습니까?`;
+        modalConfirm.classList.add('active');
+        return;
+      } else {
+        // 원터치 바로 착수
+        executeMove(selectedPiecePos.x, selectedPiecePos.y, col, row);
+        return;
+      }
+    }
+  }
+
+  // 2. 새로운 기물 선택
+  const piece = game.board[row][col];
+  if (piece && piece.team === game.currentTurn) {
+    selectedPiecePos = { x: col, y: row };
+    activePossibleMoves = game.getLegalMoves(col, row);
+    sound.playPieceDrop();
+    renderBoard();
+  } else {
+    // 빈 바닥이나 상대 기물 누르면 선택 해제
+    selectedPiecePos = null;
+    activePossibleMoves = [];
+    renderBoard();
+  }
+});
+
+// 실제 착수 실행 및 후속 처리
+function executeMove(fromX, fromY, toX, toY) {
+  const piece = game.board[fromY][fromX];
+  const target = game.board[toY][toX];
+  const pieceName = PIECE_NAMES.ko[piece.team][piece.type];
+
+  game.makeMove(fromX, fromY, toX, toY);
+  sound.playPieceDrop();
+
+  selectedPiecePos = null;
+  activePossibleMoves = [];
+  renderBoard();
+
+  // 음성 안내
+  if (target) {
+    const targetName = PIECE_NAMES.ko[target.team][target.type];
+    if (target.type === TYPE_KING) {
+      sound.speak(`외통수! 어르신의 완승입니다!`);
+      showGameOverModal('어르신 승리!', '상대방의 궁을 잡으셨습니다!');
+      return;
+    } else {
+      sound.speak(`${targetName}을 잡았습니다!`);
+    }
+  } else if (game.inCheck) {
+    sound.speak('장군입니다!');
+  }
+
+  // AI 턴 진행
+  if (game.gameMode === 'ai' && !game.isGameOver && game.currentTurn === TEAM_CHO) {
+    setTimeout(runAITurn, 600);
+  }
+}
+
+// AI 턴 처리
+function runAITurn() {
+  if (game.isGameOver || game.currentTurn !== TEAM_CHO) return;
+
+  const wasInCheck = game.inCheck; // AI가 장군을 당한 상태인지 확인
+  const bestMove = ai.getBestMove(TEAM_CHO, game.aiLevel);
+  if (bestMove) {
+    const target = game.board[bestMove.toY][bestMove.toX];
+    game.makeMove(bestMove.fromX, bestMove.fromY, bestMove.toX, bestMove.toY);
+    sound.playPieceDrop();
+    renderBoard();
+
+    if (target && target.type === TYPE_KING) {
+      sound.speak('외통수입니다. 다음 판에 설욕해 보세요!');
+      showGameOverModal('대국 종료', '상대방이 궁을 잡았습니다.');
+    } else if (game.inCheck) {
+      sound.speak('상대방이 장군을 불렀습니다!');
+    } else if (wasInCheck) {
+      sound.speak('멍군입니다!');
+    }
+  } else {
+    // 더 이상 둘 수 있는 합법 수가 없음 (외통수 패배)
+    sound.speak('외통수입니다! 어르신의 완승입니다!');
+    showGameOverModal('어르신 승리!', '상대방이 외통수에 걸려 기권하였습니다.');
+  }
+}
+
+// 게임 오버 모달
+function showGameOverModal(title, desc) {
+  gameOverTitle.textContent = title;
+  gameOverDesc.textContent = desc;
+  modalGameOver.classList.add('active');
+}
+
+// ============================================================
+// 이벤트 리스너 바인딩
+// ============================================================
+
+// 홈 화면 버튼들
+document.getElementById('btn-start-ai').addEventListener('click', () => {
+  game.gameMode = 'ai';
+  modalFormation.classList.add('active');
+});
+
+document.getElementById('btn-start-2p').addEventListener('click', () => {
+  game.gameMode = '2p';
+  modalFormation.classList.add('active');
+});
+
+// 차림(포진) 선택
+document.querySelectorAll('.formation-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.formation-item').forEach(i => i.classList.remove('selected'));
+    item.classList.add('selected');
+  });
+});
+
+document.getElementById('btn-confirm-formation').addEventListener('click', () => {
+  const selectedItem = document.querySelector('.formation-item.selected');
+  const formationIndex = parseInt(selectedItem.getAttribute('data-formation') || '0', 10);
+
+  modalFormation.classList.remove('active');
+  viewHome.classList.add('hidden');
+  viewGame.classList.remove('hidden');
+
+  const levelNames = { easy: '초급: 10급~6급', mid: '중급: 5급~2급', hard: '고급: 아마 1급' };
+  headerModeText.textContent = game.gameMode === 'ai' ? `AI 대국 (${levelNames[game.aiLevel]})` : '둘이서 맞대국';
+  document.getElementById('info-cho-name').textContent = game.gameMode === 'ai' ? `경로당 AI (${levelNames[game.aiLevel]})` : '친구/손주 (楚)';
+
+  game.initBoard(formationIndex, Math.floor(Math.random() * 4));
+  resizeCanvas();
+  sound.speak('청춘 장기를 시작합니다. 즐거운 대국 되세요!');
+});
+
+// 대국 중 상단 [◀ 나가기]
+document.getElementById('btn-game-back').addEventListener('click', () => {
+  viewGame.classList.add('hidden');
+  viewHome.classList.remove('hidden');
+  document.getElementById('btn-resume-game').classList.remove('hidden');
+});
+
+// 홈 [이어서 계속두기]
+document.getElementById('btn-resume-game').addEventListener('click', () => {
+  viewHome.classList.add('hidden');
+  viewGame.classList.remove('hidden');
+  resizeCanvas();
+});
+
+// [한 수 무르기] 버튼
+document.getElementById('btn-action-undo').addEventListener('click', () => {
+  if (game.history.length === 0) {
+    sound.speak('더 이상 무를 수가 없습니다.');
+    return;
+  }
+  // AI 모드에서는 상대 수와 내 수 총 2수를 물림
+  if (game.gameMode === 'ai') {
+    game.undoMove();
+    game.undoMove();
+  } else {
+    game.undoMove();
+  }
+  selectedPiecePos = null;
+  activePossibleMoves = [];
+  hintArrow = null;
+  sound.speak('한 수를 물렀습니다. 편안하게 다시 생각해보세요.');
+  renderBoard();
+});
+
+// [친절한 훈수] 버튼
+document.getElementById('btn-action-hint').addEventListener('click', () => {
+  if (game.isGameOver) return;
+  const best = ai.getBestMove(game.currentTurn, 'hard');
+  if (best) {
+    hintArrow = best;
+    const piece = game.board[best.fromY][best.fromX];
+    const pieceName = PIECE_NAMES.ko[piece.team][piece.type];
+    guideText.textContent = `💡 [훈수]: ${pieceName}을(를) 황금 화살표 위치로 두시면 유리합니다!`;
+    guideText.classList.add('highlight');
+    sound.speak(`${pieceName}을 화살표 위치로 두시면 유리합니다.`);
+    renderBoard();
+  }
+});
+
+// [한 수 쉼] 버튼
+document.getElementById('btn-action-pass').addEventListener('click', () => {
+  if (game.isGameOver) return;
+  game.currentTurn = game.currentTurn === TEAM_CHO ? TEAM_HAN : TEAM_CHO;
+  selectedPiecePos = null;
+  activePossibleMoves = [];
+  sound.speak('한 수 쉬셨습니다. 상대방 차례입니다.');
+  renderBoard();
+  if (game.gameMode === 'ai' && game.currentTurn === TEAM_CHO) {
+    setTimeout(runAITurn, 600);
+  }
+});
+
+// [다시하기] 버튼
+document.getElementById('btn-action-restart').addEventListener('click', () => {
+  modalFormation.classList.add('active');
+});
+
+// 2단계 착수 모달 확인/취소
+document.getElementById('btn-confirm-move').addEventListener('click', () => {
+  modalConfirm.classList.remove('active');
+  if (pendingMove) {
+    executeMove(pendingMove.fromX, pendingMove.fromY, pendingMove.toX, pendingMove.toY);
+    pendingMove = null;
+  }
+});
+
+document.getElementById('btn-cancel-move').addEventListener('click', () => {
+  modalConfirm.classList.remove('active');
+  pendingMove = null;
+});
+
+// 게임 오버 모달 버튼
+document.getElementById('btn-game-over-home').addEventListener('click', () => {
+  modalGameOver.classList.remove('active');
+  viewGame.classList.add('hidden');
+  viewHome.classList.remove('hidden');
+});
+
+document.getElementById('btn-game-over-restart').addEventListener('click', () => {
+  modalGameOver.classList.remove('active');
+  modalFormation.classList.add('active');
+});
+
+// 한글 ↔ 한자 글꼴 토글
+function toggleFontMode() {
+  fontMode = fontMode === 'ko' ? 'han' : 'ko';
+  const label = fontMode === 'ko' ? '한글 기물' : '한자 기물';
+  document.getElementById('label-piece-type').textContent = label;
+  document.getElementById('btn-game-font-label').textContent = fontMode === 'ko' ? '한글' : '한자';
+  renderBoard();
+}
+
+document.getElementById('btn-toggle-font-home').addEventListener('click', toggleFontMode);
+document.getElementById('btn-game-toggle-font').addEventListener('click', toggleFontMode);
+
+// 설정 모달 열기/닫기
+document.getElementById('btn-open-settings-home').addEventListener('click', () => {
+  updateAILevelUI(game.aiLevel, false);
+  modalSettings.classList.add('active');
+});
+document.getElementById('btn-close-settings').addEventListener('click', () => {
+  modalSettings.classList.remove('active');
+});
+
+// 설정 옵션 버튼 바인딩
+document.getElementById('opt-font-ko').addEventListener('click', () => {
+  fontMode = 'ko';
+  document.getElementById('opt-font-ko').classList.add('active');
+  document.getElementById('opt-font-han').classList.remove('active');
+  renderBoard();
+});
+document.getElementById('opt-font-han').addEventListener('click', () => {
+  fontMode = 'han';
+  document.getElementById('opt-font-han').classList.add('active');
+  document.getElementById('opt-font-ko').classList.remove('active');
+  renderBoard();
+});
+document.getElementById('opt-move-confirm').addEventListener('click', () => {
+  moveConfirmMode = true;
+  document.getElementById('opt-move-confirm').classList.add('active');
+  document.getElementById('opt-move-direct').classList.remove('active');
+});
+document.getElementById('opt-move-direct').addEventListener('click', () => {
+  moveConfirmMode = false;
+  document.getElementById('opt-move-direct').classList.add('active');
+  document.getElementById('opt-move-confirm').classList.remove('active');
+});
+document.getElementById('opt-voice-on').addEventListener('click', () => {
+  sound.enabled = true;
+  document.getElementById('opt-voice-on').classList.add('active');
+  document.getElementById('opt-voice-off').classList.remove('active');
+});
+document.getElementById('opt-voice-off').addEventListener('click', () => {
+  sound.enabled = false;
+  document.getElementById('opt-voice-off').classList.add('active');
+  document.getElementById('opt-voice-on').classList.remove('active');
+});
+
+// AI 난이도 설정 (아마추어 등급 체계 및 친절한 안내 메시지 & 오디오 음성)
+const aiLevelData = {
+  easy: {
+    id: 'opt-ai-easy',
+    val: 'easy',
+    title: '초급 (10급 ~ 6급) 수준 안내',
+    detail: '장기 규칙을 배우시거나 가볍게 즐기시기 좋은 단계입니다. 기본 장기 규칙과 멍군을 충실히 지키며, 어르신께서 시원하게 이기실 수 있도록 편안하게 맞춰둡니다.',
+    speech: '초급을 선택하셨습니다. 장기를 가볍게 즐기시기 좋은 단계입니다.',
+    shortTitle: '기력: 초급',
+    shortSub: '(10급~6급)'
+  },
+  mid: {
+    id: 'opt-ai-mid',
+    val: 'mid',
+    title: '중급 (5급 ~ 2급) 수준 안내',
+    detail: '동네 경로당이나 복지관의 장기 고수 수준입니다! 초반 면포와 마를 정석대로 배치하며, 아군 기물을 알뜰하게 지키며 팽팽한 수싸움을 펼칩니다.',
+    speech: '중급을 선택하셨습니다. 경로당 고수 수준의 팽팽한 대국입니다.',
+    shortTitle: '기력: 중급',
+    shortSub: '(5급~2급)'
+  },
+  hard: {
+    id: 'opt-ai-hard',
+    val: 'hard',
+    title: '고급 (아마 1급) 수준 안내',
+    detail: '기원 1급 수준의 깊은 수읽기를 자랑합니다! 차와 포의 날카로운 연계 공격과 탄탄한 궁성 수비로 한 수 한 수 진검승부를 펼칩니다.',
+    speech: '고급을 선택하셨습니다. 기원 일급 수준의 깊은 수읽기 대국입니다.',
+    shortTitle: '기력: 고급',
+    shortSub: '(아마 1급)'
+  }
+};
+
+function updateAILevelUI(levelKey, playVoice = false) {
+  const data = aiLevelData[levelKey];
+  if (!data) return;
+  game.aiLevel = levelKey;
+
+  // 버튼 active 클래스 갱신
+  Object.values(aiLevelData).forEach(item => {
+    const btn = document.getElementById(item.id);
+    if (btn) btn.classList.remove('active');
+  });
+  const currentBtn = document.getElementById(data.id);
+  if (currentBtn) currentBtn.classList.add('active');
+
+  // 안내 카드 텍스트 갱신
+  const titleEl = document.getElementById('ai-desc-title');
+  const detailEl = document.getElementById('ai-desc-detail');
+  if (titleEl) titleEl.textContent = data.title;
+  if (detailEl) detailEl.textContent = data.detail;
+
+  // 홈 화면 라벨 갱신 (1행 / 2행 분리로 줄바꿈 잘림 100% 방지)
+  const homeTitle = document.getElementById('label-ai-level-title');
+  const homeSub = document.getElementById('label-ai-level-sub');
+  if (homeTitle) homeTitle.textContent = data.shortTitle;
+  if (homeSub) homeSub.textContent = data.shortSub;
+
+  // 친절한 오디오 음성 낭독 (어르신 배려)
+  if (playVoice && sound && typeof sound.speak === 'function') {
+    sound.speak(data.speech);
+  }
+}
+
+// 각 난이도 버튼 클릭 이벤트 연결
+Object.keys(aiLevelData).forEach(key => {
+  const btn = document.getElementById(aiLevelData[key].id);
+  if (btn) {
+    btn.addEventListener('click', () => {
+      updateAILevelUI(key, true);
+    });
+  }
+});
+
+document.getElementById('btn-open-level-home').addEventListener('click', () => {
+  updateAILevelUI(game.aiLevel, false);
+  modalSettings.classList.add('active');
+});
+
+// PWA 서비스 워커 등록
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => {
+      console.log('SW registration error:', err);
+    });
+  });
+}
+
+// 최초 보드 초기화 및 난이도 UI 동기화
+game.initBoard(0, 0);
+updateAILevelUI(game.aiLevel, false);
+</script>
+
+</body>
+</html>
