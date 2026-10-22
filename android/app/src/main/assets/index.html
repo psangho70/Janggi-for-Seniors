@@ -1999,6 +1999,31 @@ let selectedPiecePos = null;
 let activePossibleMoves = [];
 let pendingMove = null;
 let hintArrow = null; // 훈수 화살표
+let hintAnimId = null; // 훈수 펄스 애니메이션 프레임 ID
+let hintPulsePhase = 0; // 훈수 펄스 위상값
+
+// 훈수 펄스 애니메이션 시작
+function startHintAnimation() {
+  if (hintAnimId) cancelAnimationFrame(hintAnimId);
+  function loop() {
+    if (!hintArrow) {
+      hintAnimId = null;
+      return;
+    }
+    hintPulsePhase = (hintPulsePhase + 0.05) % (Math.PI * 2);
+    renderBoard();
+    hintAnimId = requestAnimationFrame(loop);
+  }
+  hintAnimId = requestAnimationFrame(loop);
+}
+
+// 훈수 펄스 애니메이션 중지
+function stopHintAnimation() {
+  if (hintAnimId) {
+    cancelAnimationFrame(hintAnimId);
+    hintAnimId = null;
+  }
+}
 
 // DOM 요소 캐시
 const canvas = document.getElementById('janggi-canvas');
@@ -2258,76 +2283,211 @@ function renderBoard() {
 
   // 10. 훈수 화살표 최상단 오버레이 (기물에 절대 가려지지 않음!)
   if (hintArrow) {
-    const x1 = offsetX + hintArrow.fromX * cellW;
-    const y1 = offsetY + hintArrow.fromY * cellH;
-    const x2 = offsetX + hintArrow.toX * cellW;
-    const y2 = offsetY + hintArrow.toY * cellH;
-
-    ctx.save();
-
-    // [출발지 하이라이트] - 출발 기물 둘레에 황금빛 반짝임 링
-    ctx.beginPath();
-    ctx.arc(x1, y1, pieceRadius * 1.08, 0, Math.PI * 2);
-    ctx.strokeStyle = '#FBBF24';
-    ctx.lineWidth = 4.5;
-    ctx.shadowColor = '#F59E0B';
-    ctx.shadowBlur = 12;
-    ctx.stroke();
-
-    // [화살표 머리 - 큼직한 황금 삼각형]
-    const angle = Math.atan2(y2 - y1, x2 - x1);
-    const arrowLen = 24;
-    const arrowWing = Math.PI / 6;
-
-    // 선분 끝을 화살촉 내부로 설정하여 끝이 삐져나오지 않도록 정밀 계산
-    const endX = x2 - (arrowLen * 0.5) * Math.cos(angle);
-    const endY = y2 - (arrowLen * 0.5) * Math.sin(angle);
-
-    // [화살표 선분 - 이중 외곽선으로 어떤 배경/기물 위에서도 선명]
-    // 1) 바깥 어두운 외곽선 (10px)
-    ctx.shadowBlur = 0;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = '#1C1917';
-    ctx.lineWidth = 10;
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(endX, endY);
-    ctx.stroke();
-
-    // 2) 안쪽 선명한 황금색 (6px)
-    ctx.strokeStyle = '#FBBF24';
-    ctx.lineWidth = 6;
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(endX, endY);
-    ctx.stroke();
-
-    // 머리 외곽선 및 채움
-    ctx.fillStyle = '#D97706';
-    ctx.strokeStyle = '#1C1917';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(x2, y2);
-    ctx.lineTo(x2 - arrowLen * Math.cos(angle - arrowWing), y2 - arrowLen * Math.sin(angle - arrowWing));
-    ctx.lineTo(x2 - (arrowLen * 0.55) * Math.cos(angle), y2 - (arrowLen * 0.55) * Math.sin(angle));
-    ctx.lineTo(x2 - arrowLen * Math.cos(angle + arrowWing), y2 - arrowLen * Math.sin(angle + arrowWing));
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // [도착지 타깃 링]
-    ctx.beginPath();
-    ctx.arc(x2, y2, pieceRadius * 0.9, 0, Math.PI * 2);
-    ctx.strokeStyle = '#F59E0B';
-    ctx.lineWidth = 3;
-    ctx.setLineDash([5, 5]);
-    ctx.stroke();
-
-    ctx.restore();
+    drawHintOverlay(hintArrow, hintPulsePhase);
   }
 
   // 11. 점수 및 상태 텍스트 갱신
   updateStatusUI();
+}
+
+// ============================================================
+// 훈수 화살표 및 오버레이 렌더링 (아름다운 3D 황금 리본 & 셰브론 다트 디자인)
+// ============================================================
+function drawHintOverlay(hint, pulsePhase = 0) {
+  const pieceRadius = Math.min(cellW, cellH) * 0.44;
+  const x1 = offsetX + hint.fromX * cellW;
+  const y1 = offsetY + hint.fromY * cellH;
+  const x2 = offsetX + hint.toX * cellW;
+  const y2 = offsetY + hint.toY * cellH;
+
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const dist = Math.hypot(dx, dy);
+  if (dist === 0) return;
+  const angle = Math.atan2(dy, dx);
+
+  ctx.save();
+
+  // --- [1] 출발지 (Origin) 은은한 황금 오라 & 듀얼 링 ---
+  const auraRad = pieceRadius * (1.18 + 0.08 * Math.sin(pulsePhase));
+  const auraGrad = ctx.createRadialGradient(x1, y1, pieceRadius * 0.4, x1, y1, auraRad);
+  auraGrad.addColorStop(0, 'rgba(245, 158, 11, 0.45)');
+  auraGrad.addColorStop(0.7, 'rgba(251, 191, 36, 0.2)');
+  auraGrad.addColorStop(1, 'rgba(245, 158, 11, 0)');
+  ctx.fillStyle = auraGrad;
+  ctx.beginPath();
+  ctx.arc(x1, y1, auraRad, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 출발 기물 외곽 골드 링
+  ctx.shadowColor = '#F59E0B';
+  ctx.shadowBlur = 10;
+  ctx.strokeStyle = '#FBBF24';
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.arc(x1, y1, pieceRadius * 1.05, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // 출발점 중심 펄 (작은 황금 링)
+  ctx.shadowBlur = 6;
+  ctx.fillStyle = '#FFFBEB';
+  ctx.strokeStyle = '#D97706';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(x1, y1, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // --- [2] 화살표 몸통 (Tapered Radiant Ribbon) ---
+  const arrowLen = 30; // 날렵하고 세련된 화살촉 길이
+  const arrowWing = 0.54; // 화살촉 날개 각도 (~31도)
+  const neckDist = dist - arrowLen * 0.72; // 몸통 선분이 닿는 위치
+
+  // 기물 중심에서 살짝 벗어나 출발하여 기물 글자를 가리지 않음
+  const startOffset = pieceRadius * 0.45;
+  const sx = x1 + Math.cos(angle) * startOffset;
+  const sy = y1 + Math.sin(angle) * startOffset;
+  const ex = x1 + Math.cos(angle) * neckDist;
+  const ey = y1 + Math.sin(angle) * neckDist;
+
+  // 화살표 몸통 선형 그라데이션 (호박색 앰버 ➜ 찬란한 황금 ➜ 레몬 골드)
+  const bodyGrad = ctx.createLinearGradient(sx, sy, ex, ey);
+  bodyGrad.addColorStop(0, '#D97706');
+  bodyGrad.addColorStop(0.5, '#FBBF24');
+  bodyGrad.addColorStop(1, '#FEF08A');
+
+  // 1) 바깥 테두리 (원목과 어울리는 마호가니 앰버 브라운 테두리)
+  ctx.shadowColor = 'rgba(245, 158, 11, 0.8)';
+  ctx.shadowBlur = 14;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#2B1404';
+  ctx.lineWidth = 11;
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(ex, ey);
+  ctx.stroke();
+
+  // 2) 안쪽 황금 그라데이션 바디
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = bodyGrad;
+  ctx.lineWidth = 7;
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(ex, ey);
+  ctx.stroke();
+
+  // 3) 중심 하이라이트 광택선 (보석 같은 빛의 리브)
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  ctx.moveTo(sx, sy);
+  ctx.lineTo(ex, ey);
+  ctx.stroke();
+
+  // --- [3] 3D 입체 투톤 화살촉 (Two-Tone Faceted Arrow Head) ---
+  const tipX = x2;
+  const tipY = y2;
+  const leftX = x2 - arrowLen * Math.cos(angle - arrowWing);
+  const leftY = y2 - arrowLen * Math.sin(angle - arrowWing);
+  const rightX = x2 - arrowLen * Math.cos(angle + arrowWing);
+  const rightY = y2 - arrowLen * Math.sin(angle + arrowWing);
+  const indentX = x2 - (arrowLen * 0.65) * Math.cos(angle);
+  const indentY = y2 - (arrowLen * 0.65) * Math.sin(angle);
+
+  // 화살촉 외곽선 (마호가니 테두리)
+  ctx.shadowColor = '#F59E0B';
+  ctx.shadowBlur = 12;
+  ctx.strokeStyle = '#2B1404';
+  ctx.lineWidth = 3.5;
+  ctx.lineJoin = 'round';
+
+  ctx.beginPath();
+  ctx.moveTo(tipX, tipY);
+  ctx.lineTo(leftX, leftY);
+  ctx.lineTo(indentX, indentY);
+  ctx.lineTo(rightX, rightY);
+  ctx.closePath();
+  ctx.stroke();
+
+  // 화살촉 좌측 면 (밝은 반사광: 레몬 골드 그라데이션)
+  ctx.shadowBlur = 0;
+  const leftGrad = ctx.createLinearGradient(leftX, leftY, tipX, tipY);
+  leftGrad.addColorStop(0, '#FBBF24');
+  leftGrad.addColorStop(1, '#FFFBEB');
+  ctx.fillStyle = leftGrad;
+  ctx.beginPath();
+  ctx.moveTo(tipX, tipY);
+  ctx.lineTo(leftX, leftY);
+  ctx.lineTo(indentX, indentY);
+  ctx.closePath();
+  ctx.fill();
+
+  // 화살촉 우측 면 (깊이 있는 음영: 앰버 골드 그라데이션)
+  const rightGrad = ctx.createLinearGradient(rightX, rightY, tipX, tipY);
+  rightGrad.addColorStop(0, '#B45309');
+  rightGrad.addColorStop(1, '#F59E0B');
+  ctx.fillStyle = rightGrad;
+  ctx.beginPath();
+  ctx.moveTo(tipX, tipY);
+  ctx.lineTo(indentX, indentY);
+  ctx.lineTo(rightX, rightY);
+  ctx.closePath();
+  ctx.fill();
+
+  // 중앙 능선 하이라이트 (Ridge Line)
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 2.0;
+  ctx.beginPath();
+  ctx.moveTo(tipX, tipY);
+  ctx.lineTo(indentX, indentY);
+  ctx.stroke();
+
+  // --- [4] 도착지 보석 타깃 (Crosshair Jewel Target) ---
+  const targetR = pieceRadius * (0.85 + 0.06 * Math.sin(pulsePhase * 1.5));
+
+  // 타깃 영역 은은한 방사형 채움
+  const targetGrad = ctx.createRadialGradient(x2, y2, 0, x2, y2, targetR);
+  targetGrad.addColorStop(0, 'rgba(251, 191, 36, 0.35)');
+  targetGrad.addColorStop(0.7, 'rgba(245, 158, 11, 0.15)');
+  targetGrad.addColorStop(1, 'rgba(245, 158, 11, 0)');
+  ctx.fillStyle = targetGrad;
+  ctx.beginPath();
+  ctx.arc(x2, y2, targetR, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 타깃 회전 점선 골드 링
+  ctx.strokeStyle = '#FBBF24';
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([6, 4]);
+  ctx.lineDashOffset = -pulsePhase * 4;
+  ctx.beginPath();
+  ctx.arc(x2, y2, targetR, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 4방향 세련된 조준선 틱(Crosshair Ticks)
+  const tickInner = targetR - 5;
+  const tickOuter = targetR + 6;
+  ctx.strokeStyle = '#F59E0B';
+  ctx.lineWidth = 2.5;
+  const dirs = [0, Math.PI / 2, Math.PI, (Math.PI * 3) / 2];
+  for (const d of dirs) {
+    ctx.beginPath();
+    ctx.moveTo(x2 + Math.cos(d) * tickInner, y2 + Math.sin(d) * tickInner);
+    ctx.lineTo(x2 + Math.cos(d) * tickOuter, y2 + Math.sin(d) * tickOuter);
+    ctx.stroke();
+  }
+
+  // 타깃 정중앙 작은 보석 점
+  ctx.fillStyle = '#FEF08A';
+  ctx.strokeStyle = '#B45309';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(x2, y2, 4.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.restore();
 }
 
 // 상태 UI 갱신
@@ -2375,6 +2535,7 @@ canvas.addEventListener('click', (e) => {
 
   if (!game.isValidPos(col, row)) return;
 
+  stopHintAnimation();
   hintArrow = null; // 훈수 화살표 초기화
 
   // 1. 이미 기물이 선택된 상태에서 목적지를 누른 경우
@@ -2418,6 +2579,8 @@ canvas.addEventListener('click', (e) => {
 
 // 실제 착수 실행 및 후속 처리
 function executeMove(fromX, fromY, toX, toY) {
+  stopHintAnimation();
+  hintArrow = null;
   const piece = game.board[fromY][fromX];
   const target = game.board[toY][toX];
   const pieceName = PIECE_NAMES.ko[piece.team][piece.type];
@@ -2552,6 +2715,7 @@ document.getElementById('btn-action-undo').addEventListener('click', () => {
   }
   selectedPiecePos = null;
   activePossibleMoves = [];
+  stopHintAnimation();
   hintArrow = null;
   sound.speak('한 수를 물렀습니다. 편안하게 다시 생각해보세요.');
   renderBoard();
@@ -2584,6 +2748,7 @@ btnHint.addEventListener('click', () => {
       if (best) {
         hintArrow = best;
         renderBoard(); // 보드 렌더링 (화살표 및 오버레이 표시)
+        startHintAnimation(); // 부드러운 펄스 애니메이션 시작
 
         const piece = game.board[best.fromY][best.fromX];
         const pieceName = PIECE_NAMES.ko[piece.team][piece.type];
@@ -2600,6 +2765,7 @@ btnHint.addEventListener('click', () => {
             e.stopPropagation();
             if (hintArrow) {
               const moveTarget = { ...hintArrow };
+              stopHintAnimation();
               hintArrow = null;
               executeMove(moveTarget.fromX, moveTarget.fromY, moveTarget.toX, moveTarget.toY);
             }
@@ -2620,6 +2786,8 @@ btnHint.addEventListener('click', () => {
 // [한 수 쉼] 버튼
 document.getElementById('btn-action-pass').addEventListener('click', () => {
   if (game.isGameOver) return;
+  stopHintAnimation();
+  hintArrow = null;
   game.currentTurn = game.currentTurn === TEAM_CHO ? TEAM_HAN : TEAM_CHO;
   selectedPiecePos = null;
   activePossibleMoves = [];
