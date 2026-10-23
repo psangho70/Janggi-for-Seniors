@@ -505,9 +505,11 @@
       display: none;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 12px 10px;
       z-index: 100;
       backdrop-filter: blur(3px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .modal-overlay.active {
       display: flex;
@@ -517,12 +519,27 @@
       background: #FFFDF9;
       border: 4px solid #8C5824;
       border-radius: var(--radius-lg);
-      width: 92%;
+      width: 94%;
       max-width: 380px;
-      padding: 22px 16px;
+      max-height: calc(100vh - 20px);
+      max-height: calc(100dvh - 20px);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      padding: 18px 14px 14px;
       text-align: center;
       box-shadow: 0 16px 36px rgba(0,0,0,0.5);
       animation: modalSlideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .modal-card::-webkit-scrollbar {
+      width: 5px;
+    }
+    .modal-card::-webkit-scrollbar-thumb {
+      background: #C49B5A;
+      border-radius: 4px;
+    }
+    .modal-card::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.04);
     }
     @keyframes modalSlideUp {
       from { transform: translateY(30px) scale(0.95); opacity: 0; }
@@ -530,30 +547,30 @@
     }
 
     .modal-title {
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 900;
       color: #382006;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       font-family: 'Noto Serif KR', serif;
       white-space: nowrap;
     }
     .modal-desc {
-      font-size: 15.5px;
+      font-size: 15px;
       font-weight: 600;
       color: #5C4325;
       line-height: 1.35;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       word-break: keep-all;
     }
 
     .modal-btn-row {
       display: flex;
-      gap: 12px;
+      gap: 10px;
     }
     .modal-btn {
       flex: 1;
-      padding: 13px 10px;
-      font-size: 18px;
+      padding: 12px 10px;
+      font-size: 17px;
       font-weight: 900;
       border-radius: var(--radius-md);
       border: none;
@@ -579,7 +596,7 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 10px;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
     }
     .formation-item {
       background: #FDF8ED;
@@ -625,38 +642,47 @@
       border-radius: 6px;
     }
 
-    /* 설정 모달 옵션 목록 */
+    /* 설정 모달 옵션 목록 (컴팩트 최적화) */
     .setting-group {
       text-align: left;
-      margin-bottom: 16px;
+      margin-bottom: 10px;
     }
     .setting-label {
-      font-size: 17px;
+      font-size: 15.5px;
       font-weight: 900;
       color: #382006;
-      margin-bottom: 8px;
+      margin-bottom: 5px;
       display: block;
     }
     .setting-btn-group {
       display: flex;
-      gap: 8px;
+      gap: 6px;
     }
     .setting-opt-btn {
       flex: 1;
-      padding: 10px 4px;
+      padding: 8px 4px;
       background: #F3EADB;
       border: 2px solid #BA9B6E;
       border-radius: var(--radius-sm);
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 700;
       color: #4A3319;
       cursor: pointer;
       text-align: center;
+      transition: all 0.15s ease;
     }
     .setting-opt-btn.active {
       background: #B45309;
       border-color: #78350F;
       color: #FFF;
+      box-shadow: 0 2px 6px rgba(180, 83, 9, 0.35);
+    }
+
+    /* 하단 액션 버튼 항복(기권) 스타일 */
+    .action-btn.btn-resign {
+      background: #FEF2F2;
+      border-color: #EF4444;
+      color: #991B1B;
     }
 
     /* 숨김 처리 */
@@ -774,7 +800,7 @@
       </div>
     </div>
 
-    <!-- 하단 컨트롤 바 (3대 빅 버튼) -->
+    <!-- 하단 컨트롤 바 (상황 맞춤형 4대 버튼) -->
     <div class="game-bottom-controls">
       <button class="action-btn btn-undo" id="btn-action-undo">
         <span style="font-size:22px;">↩️</span>
@@ -783,6 +809,10 @@
       <button class="action-btn btn-hint" id="btn-action-hint">
         <span style="font-size:22px;">💡</span>
         <span>친절한 훈수</span>
+      </button>
+      <button class="action-btn btn-resign hidden" id="btn-action-resign">
+        <span style="font-size:22px;">🏳️</span>
+        <span>항복 (기권)</span>
       </button>
       <button class="action-btn btn-pass" id="btn-action-pass">
         <span style="font-size:22px;">✋</span>
@@ -847,7 +877,7 @@
   </div>
 
   <!-- ============================================================
-       [모달 3] 대국 결과 모달 (승리 / 패배 / 빅장)
+       [모달 3] 대국 결과 모달 (승리 / 패배 / 빅장 / 항복)
        ============================================================ -->
   <div class="modal-overlay" id="modal-game-over">
     <div class="modal-card">
@@ -861,7 +891,7 @@
   </div>
 
   <!-- ============================================================
-       [모달 4] 환경 설정 모달
+       [모달 4] 환경 설정 모달 (상하 스크롤 보장 및 컴팩트 뷰)
        ============================================================ -->
   <div class="modal-overlay" id="modal-settings">
     <div class="modal-card">
@@ -892,26 +922,43 @@
       </div>
 
       <div class="setting-group">
-        <label class="setting-label">AI 기력(난이도) - 아마추어 등급 체계</label>
+        <label class="setting-label">AI 기력 (난이도)</label>
         <div class="setting-btn-group">
-          <button class="setting-opt-btn active" id="opt-ai-easy">초급<br><span style="font-size:13px; font-weight:700;">(10급~6급)</span></button>
-          <button class="setting-opt-btn" id="opt-ai-mid">중급<br><span style="font-size:13px; font-weight:700;">(5급~2급)</span></button>
-          <button class="setting-opt-btn" id="opt-ai-hard">고급<br><span style="font-size:13px; font-weight:700;">(아마 1급)</span></button>
+          <button class="setting-opt-btn" id="opt-ai-easy">초급</button>
+          <button class="setting-opt-btn active" id="opt-ai-mid">중급</button>
+          <button class="setting-opt-btn" id="opt-ai-hard">고급</button>
         </div>
         <!-- 선택된 난이도 수준 안내 카드 -->
-        <div id="ai-level-desc-box" style="margin-top:12px; background:#f7efe5; border:2px solid #b58863; border-radius:12px; padding:12px 14px; text-align:left; box-shadow:inset 0 1px 3px rgba(0,0,0,0.05);">
-          <div style="font-weight:900; font-size:15px; color:#5c3a21; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
-            <span>💡</span> <span id="ai-desc-title">초급 (10급 ~ 6급) 수준 안내</span>
+        <div id="ai-level-desc-box" style="margin-top:8px; background:#f7efe5; border:2px solid #b58863; border-radius:10px; padding:9px 12px; text-align:left; box-shadow:inset 0 1px 3px rgba(0,0,0,0.05);">
+          <div style="font-weight:900; font-size:14.5px; color:#5c3a21; margin-bottom:3px; display:flex; align-items:center; gap:6px;">
+            <span>💡</span> <span id="ai-desc-title">중급 수준 안내</span>
           </div>
-          <div id="ai-desc-detail" style="font-size:13.5px; color:#4a2c11; line-height:1.45; font-weight:600;">
-            장기를 배우시거나 가볍게 즐기시기 좋은 단계입니다. 기본 장기 규칙과 멍군을 지키며, 어르신께서 시원하게 이기실 수 있도록 편안하게 맞춰둡니다.
+          <div id="ai-desc-detail" style="font-size:13px; color:#4a2c11; line-height:1.4; font-weight:600;">
+            동네 경로당이나 기원의 장기 고수 수준입니다! 날카로운 수읽기와 탄탄한 궁성 수비로 팽팽한 진검승부를 펼칩니다.
           </div>
         </div>
       </div>
 
-      <button class="modal-btn modal-btn-primary" id="btn-close-settings" style="width:100%; margin-top:10px;">
+      <button class="modal-btn modal-btn-primary" id="btn-close-settings" style="width:100%; margin-top:8px; padding:12px 10px;">
         설정 완료
       </button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       [모달 5] 둘이서 맞대국 항복(기권) 확인 모달
+       ============================================================ -->
+  <div class="modal-overlay" id="modal-confirm-resign">
+    <div class="modal-card">
+      <h2 class="modal-title">항복 (기권) 확인</h2>
+      <p class="modal-desc" id="confirm-resign-desc">
+        현재 차례에서 항복하시겠습니까?<br>
+        <span style="color:#B91C1C; font-weight:800; display:inline-block; margin-top:4px;">상대방이 승리하게 됩니다.</span>
+      </p>
+      <div class="modal-btn-row">
+        <button class="modal-btn modal-btn-secondary" id="btn-cancel-resign">계속 두기</button>
+        <button class="modal-btn modal-btn-primary" id="btn-confirm-resign" style="background:#DC2626;">예, 항복합니다</button>
+      </div>
     </div>
   </div>
 
@@ -1597,53 +1644,28 @@ class JanggiAI {
     });
   }
 
-  // 최적의 한 수 계산 (2단계 고도화: 어르신 맞춤형 초급 / 중급 / 고급)
-  getBestMove(team, level = 'easy') {
+  // 최적의 한 수 계산 (요청 반영: 기존 중급->초급, 기존 고급->중급, 고급->아마 1급 이상 고수)
+  getBestMove(team, level = 'mid') {
     // 반드시 '진짜 합법 수(멍군 검사 포함)'만 획득!
     let moves = this.getAllLegalMoves(team);
     if (moves.length === 0) return null; // 둘 수가 없음(외통수/기권)
 
     // 초반 오프닝 정석 수(Opening Book) 탐색 (대국 시작 1~8수)
     const turnCount = this.game.history.length;
-    if (turnCount < (level === 'easy' ? 4 : 8)) {
+    const maxOpeningTurns = (level === 'easy' ? 6 : (level === 'mid' ? 8 : 10));
+    if (turnCount < maxOpeningTurns) {
       const openingMove = this.getOpeningMove(team, moves);
       if (openingMove) return openingMove;
     }
 
-    // [초급: 10급 ~ 6급] - 어르신께서 이기는 즐거움을 느끼시는 단계
-    // 기본 장기 룰과 멍군을 충실히 지키되, 가끔 2~3번째 양호한 수를 두어 어르신께 기회를 열어드림
-    if (level === 'easy') {
-      let candidateMoves = [];
-      for (const m of moves) {
-        this.game.board[m.toY][m.toX] = m.piece;
-        this.game.board[m.fromY][m.fromX] = null;
+    // [난이도별 탐색 깊이]
+    // 초급: 기존 중급 수준 (깊이 3수 Alpha-Beta)
+    // 중급: 기존 고급 수준 (깊이 4수 Alpha-Beta + TT + Killer Move)
+    // 고급: 아마 1급 이상의 특급 고수 레벨 (깊이 5수 Alpha-Beta 심층 수읽기 + 기물 보호망/차포연계)
+    const searchDepth = (level === 'hard') ? 5 : (level === 'mid' ? 4 : 3);
 
-        let score = this.evaluateMoveSafety(m, team);
-        if (m.captured) score += (this.pieceValues[m.captured.type] || 0) * 1.2;
-
-        const oppTeam = team === TEAM_CHO ? TEAM_HAN : TEAM_CHO;
-        if (this.game.isCheck(oppTeam)) score += 400;
-
-        this.game.board[m.fromY][m.fromX] = m.piece;
-        this.game.board[m.toY][m.toX] = m.captured;
-
-        candidateMoves.push({ move: m, score });
-      }
-
-      candidateMoves.sort((a, b) => b.score - a.score);
-      // 70%는 최선수, 30%는 2번째 수를 두어 어르신에게 활로 제공
-      if (candidateMoves.length > 1 && Math.random() < 0.3) {
-        return candidateMoves[1].move;
-      }
-      return candidateMoves[0].move;
-    }
-
-    // [중급: 5급 ~ 2급] - 동네 경로당/복지관 장기 고수 수준 (깊이 3수)
-    // [고급: 아마 1급] - 기원 1급 수준의 전치테이블 & SEE 기반 깊은 수읽기 (깊이 4수)
-    const searchDepth = (level === 'hard') ? 4 : 3;
-
-    // 전치 테이블 메모리 관리 (50,000개 초과 시 절반 정리)
-    if (this.tt.size > 50000) this.tt.clear();
+    // 전치 테이블 메모리 관리 (60,000개 초과 시 정리)
+    if (this.tt.size > 60000) this.tt.clear();
 
     const currentHash = this.computeBoardHash(this.game.board, team);
     const ttEntry = this.tt.get(currentHash);
@@ -1706,7 +1728,7 @@ class JanggiAI {
     // 1. 전치 테이블(Transposition Table) 조회
     const hash = this.computeBoardHash(this.game.board, team);
     const ttEntry = this.tt.get(hash);
-    if (ttEntry && ttEntry.depth >= depth && level === 'hard') {
+    if (ttEntry && ttEntry.depth >= depth && (level === 'hard' || level === 'mid')) {
       if (ttEntry.flag === 'EXACT') return ttEntry.score;
       if (ttEntry.flag === 'LOWERBOUND' && ttEntry.score > alpha) alpha = ttEntry.score;
       if (ttEntry.flag === 'UPPERBOUND' && ttEntry.score < beta) beta = ttEntry.score;
@@ -1809,15 +1831,16 @@ class JanggiAI {
     return 20;
   }
 
-  // 국면 정밀 평가 함수 (기물가치 + 위치가치 + 궁성안전도 + 장군 위협 + 기물 보호망)
+  // 국면 정밀 평가 함수 (기물가치 + 위치가치 + 궁성안전도 + 장군 위협 + 기물 보호망/차포연계)
   evaluatePosition(level) {
     let score = 0;
     const isHanCheck = this.game.isCheck(TEAM_HAN);
     const isChoCheck = this.game.isCheck(TEAM_CHO);
 
     // 상대 궁 장군 상태 시 큰 가산점, 내 궁 장군 상태 시 큰 감점
-    if (isHanCheck) score += 700;
-    if (isChoCheck) score -= 700;
+    const checkBonus = level === 'hard' ? 900 : 700;
+    if (isHanCheck) score += checkBonus;
+    if (isChoCheck) score -= checkBonus;
 
     for (let y = 0; y < ROWS; y++) {
       for (let x = 0; x < COLS; x++) {
@@ -1837,14 +1860,14 @@ class JanggiAI {
           // 차(車)의 활로: 전방이 뚫려있고 전선에 침투할수록 강력함
           val += (Math.abs(4 - x) < 3 ? 40 : 20);
           if ((p.team === TEAM_CHO && y >= 6) || (p.team === TEAM_HAN && y <= 3)) {
-            val += 70; // 상대 진영 침투 보너스
+            val += (level === 'hard' ? 100 : 70); // 상대 진영 침투 보너스
           }
         } else if (p.type === TYPE_CANNON) {
           // 면포(중앙 궁성 앞 x=4, y=2 또는 y=7) 보너스
-          if (x === 4 && (y === 2 || y === 7)) val += 80;
+          if (x === 4 && (y === 2 || y === 7)) val += (level === 'hard' ? 110 : 80);
         } else if (p.type === TYPE_KING || p.type === TYPE_ADVISOR) {
           // 궁성 내부 수비 안정도
-          val += 40;
+          val += (level === 'hard' ? 60 : 40);
         }
 
         if (p.team === TEAM_CHO) score += val;
@@ -2049,6 +2072,10 @@ const modalGameOver = document.getElementById('modal-game-over');
 const gameOverTitle = document.getElementById('game-over-title');
 const gameOverDesc = document.getElementById('game-over-desc');
 const modalSettings = document.getElementById('modal-settings');
+const modalConfirmResign = document.getElementById('modal-confirm-resign');
+const confirmResignDesc = document.getElementById('confirm-resign-desc');
+const btnActionResign = document.getElementById('btn-action-resign');
+const btnActionHint = document.getElementById('btn-action-hint');
 
 // 캔버스 크기 계산 변수
 let cellW = 0;
@@ -2058,10 +2085,15 @@ let offsetY = 0;
 
 // 화면 크기에 맞춘 캔버스 리사이즈
 function resizeCanvas() {
+  // 게임 화면이 숨겨져 있거나 크기가 없으면 리사이즈 건너뜀 (IndexSizeError 원천 차단)
+  if (viewGame.classList.contains('hidden')) return;
+
   const rect = boardContainer.getBoundingClientRect();
+  if (!rect || rect.width <= 0 || rect.height <= 0) return;
+
   const pad = 12;
-  const availW = rect.width - pad * 2;
-  const availH = rect.height - pad * 2;
+  const availW = Math.max(10, rect.width - pad * 2);
+  const availH = Math.max(10, rect.height - pad * 2);
 
   // 장기판 비율 9:10
   const ratio = 9 / 10;
@@ -2082,8 +2114,8 @@ function resizeCanvas() {
   ctx.resetTransform();
   ctx.scale(dpr, dpr);
 
-  cellW = targetW / 9;
-  cellH = targetH / 10;
+  cellW = Math.max(1, targetW / 9);
+  cellH = Math.max(1, targetH / 10);
   offsetX = cellW / 2;
   offsetY = cellH / 2;
 
@@ -2094,8 +2126,12 @@ window.addEventListener('resize', resizeCanvas);
 
 // --- 보드 렌더링 함수 ---
 function renderBoard() {
+  // 게임 화면이 숨겨져 있거나 크기가 유효하지 않으면 렌더링 중단
+  if (viewGame.classList.contains('hidden')) return;
+
   const w = parseFloat(canvas.style.width);
   const h = parseFloat(canvas.style.height);
+  if (!w || !h || w <= 0 || h <= 0 || cellW <= 0 || cellH <= 0) return;
 
   // 1. 원목 바탕 칠하기
   ctx.fillStyle = '#E5C384';
@@ -2178,7 +2214,7 @@ function renderBoard() {
 
   // 8. 기물(Pieces) 렌더링
   const is2pMode = game.gameMode === '2p';
-  const pieceRadius = Math.min(cellW, cellH) * 0.44; // 초대형 크기!
+  const pieceRadius = Math.max(1, Math.min(cellW, cellH) * 0.44); // 초대형 크기 (양수 보장)
 
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
@@ -2679,7 +2715,15 @@ document.getElementById('btn-confirm-formation').addEventListener('click', () =>
 
   const shortLevelNames = { easy: '초급', mid: '중급', hard: '고급' };
   headerModeText.textContent = game.gameMode === 'ai' ? `AI 대국 (${shortLevelNames[game.aiLevel]})` : '둘이서 맞대국';
-  document.getElementById('info-cho-name').textContent = game.gameMode === 'ai' ? `경로당 AI (${shortLevelNames[game.aiLevel]})` : '친구/손주 (楚)';
+  document.getElementById('info-cho-name').textContent = game.gameMode === 'ai' ? `장기 AI (${shortLevelNames[game.aiLevel]})` : '상대방 (楚)';
+
+  if (game.gameMode === '2p') {
+    btnActionHint.classList.add('hidden');
+    btnActionResign.classList.remove('hidden');
+  } else {
+    btnActionHint.classList.remove('hidden');
+    btnActionResign.classList.add('hidden');
+  }
 
   game.initBoard(formationIndex, Math.floor(Math.random() * 4));
   resizeCanvas();
@@ -2829,12 +2873,113 @@ document.getElementById('btn-game-over-restart').addEventListener('click', () =>
   modalFormation.classList.add('active');
 });
 
+// ============================================================
+// 둘이서 맞대국 항복(기권) 기능
+// ============================================================
+btnActionResign.addEventListener('click', () => {
+  if (game.isGameOver) return;
+  const currentTeamName = game.currentTurn === TEAM_CHO ? '초(楚, 청록)' : '한(漢, 진홍)';
+  confirmResignDesc.innerHTML = `현재 <strong>${currentTeamName}</strong> 진영 차례입니다.<br>정말로 항복(기권)하시겠습니까?<br><span style="color:#B91C1C; font-weight:800; display:inline-block; margin-top:4px;">상대방이 승리하게 됩니다.</span>`;
+  modalConfirmResign.classList.add('active');
+});
+
+document.getElementById('btn-cancel-resign').addEventListener('click', () => {
+  modalConfirmResign.classList.remove('active');
+});
+
+document.getElementById('btn-confirm-resign').addEventListener('click', () => {
+  modalConfirmResign.classList.remove('active');
+  if (game.isGameOver) return;
+
+  const resignTeam = game.currentTurn;
+  const winTeam = resignTeam === TEAM_CHO ? TEAM_HAN : TEAM_CHO;
+  const resignName = resignTeam === TEAM_CHO ? '초(楚)' : '한(漢)';
+  const winName = winTeam === TEAM_CHO ? '초(楚)' : '한(漢)';
+
+  game.isGameOver = true;
+  stopHintAnimation();
+  hintArrow = null;
+
+  sound.speak(`${resignName} 진영이 항복하셨습니다. ${winName} 진영이 승리하셨습니다.`);
+  showGameOverModal(
+    `대국 종료 (${resignName} 항복)`,
+    `${winName} 진영의 승리입니다! 🏆\n${resignName} 진영이 기권을 선언하셨습니다.`
+  );
+});
+
+// ============================================================
+// 사용자 환경설정 영구 저장 및 불러오기 (localStorage)
+// ============================================================
+const SETTINGS_KEY = 'senior_janggi_user_settings_v1';
+const DEFAULT_SETTINGS = {
+  fontMode: 'ko',
+  moveConfirmMode: true,
+  soundEnabled: true,
+  aiLevel: 'mid' // 기본 중급
+};
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return DEFAULT_SETTINGS;
+    const parsed = JSON.parse(raw);
+    return { ...DEFAULT_SETTINGS, ...parsed };
+  } catch (e) {
+    console.warn('설정 불러오기 실패 (기본값 사용):', e);
+    return DEFAULT_SETTINGS;
+  }
+}
+
+function saveSettings() {
+  try {
+    const data = {
+      fontMode: fontMode,
+      moveConfirmMode: moveConfirmMode,
+      soundEnabled: sound ? sound.enabled : true,
+      aiLevel: game ? game.aiLevel : 'mid'
+    };
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.warn('설정 저장 실패:', e);
+  }
+}
+
+function applySettings(cfg) {
+  // 1. 기물 글꼴 모드
+  fontMode = cfg.fontMode === 'han' ? 'han' : 'ko';
+  const fontLabel = fontMode === 'ko' ? '한글 기물' : '한자 기물';
+  document.getElementById('label-piece-type').textContent = fontLabel;
+  document.getElementById('btn-game-font-label').textContent = fontMode === 'ko' ? '한글' : '한자';
+
+  document.getElementById('opt-font-ko').classList.toggle('active', fontMode === 'ko');
+  document.getElementById('opt-font-han').classList.toggle('active', fontMode === 'han');
+
+  // 2. 조작 방식
+  moveConfirmMode = Boolean(cfg.moveConfirmMode);
+  document.getElementById('opt-move-confirm').classList.toggle('active', moveConfirmMode);
+  document.getElementById('opt-move-direct').classList.toggle('active', !moveConfirmMode);
+
+  // 3. 친절한 음성 해설
+  sound.enabled = Boolean(cfg.soundEnabled);
+  document.getElementById('opt-voice-on').classList.toggle('active', sound.enabled);
+  document.getElementById('opt-voice-off').classList.toggle('active', !sound.enabled);
+
+  // 4. AI 기력 (난이도)
+  const validLevel = ['easy', 'mid', 'hard'].includes(cfg.aiLevel) ? cfg.aiLevel : 'mid';
+  updateAILevelUI(validLevel, false);
+
+  renderBoard();
+}
+
 // 한글 ↔ 한자 글꼴 토글
 function toggleFontMode() {
   fontMode = fontMode === 'ko' ? 'han' : 'ko';
   const label = fontMode === 'ko' ? '한글 기물' : '한자 기물';
   document.getElementById('label-piece-type').textContent = label;
   document.getElementById('btn-game-font-label').textContent = fontMode === 'ko' ? '한글' : '한자';
+  document.getElementById('opt-font-ko').classList.toggle('active', fontMode === 'ko');
+  document.getElementById('opt-font-han').classList.toggle('active', fontMode === 'han');
+  saveSettings();
   renderBoard();
 }
 
@@ -2848,6 +2993,7 @@ document.getElementById('btn-open-settings-home').addEventListener('click', () =
 });
 document.getElementById('btn-close-settings').addEventListener('click', () => {
   modalSettings.classList.remove('active');
+  saveSettings();
 });
 
 // 설정 옵션 버튼 바인딩
@@ -2855,63 +3001,73 @@ document.getElementById('opt-font-ko').addEventListener('click', () => {
   fontMode = 'ko';
   document.getElementById('opt-font-ko').classList.add('active');
   document.getElementById('opt-font-han').classList.remove('active');
+  document.getElementById('label-piece-type').textContent = '한글 기물';
+  document.getElementById('btn-game-font-label').textContent = '한글';
+  saveSettings();
   renderBoard();
 });
 document.getElementById('opt-font-han').addEventListener('click', () => {
   fontMode = 'han';
   document.getElementById('opt-font-han').classList.add('active');
   document.getElementById('opt-font-ko').classList.remove('active');
+  document.getElementById('label-piece-type').textContent = '한자 기물';
+  document.getElementById('btn-game-font-label').textContent = '한자';
+  saveSettings();
   renderBoard();
 });
 document.getElementById('opt-move-confirm').addEventListener('click', () => {
   moveConfirmMode = true;
   document.getElementById('opt-move-confirm').classList.add('active');
   document.getElementById('opt-move-direct').classList.remove('active');
+  saveSettings();
 });
 document.getElementById('opt-move-direct').addEventListener('click', () => {
   moveConfirmMode = false;
   document.getElementById('opt-move-direct').classList.add('active');
   document.getElementById('opt-move-confirm').classList.remove('active');
+  saveSettings();
 });
 document.getElementById('opt-voice-on').addEventListener('click', () => {
   sound.enabled = true;
   document.getElementById('opt-voice-on').classList.add('active');
   document.getElementById('opt-voice-off').classList.remove('active');
+  saveSettings();
 });
 document.getElementById('opt-voice-off').addEventListener('click', () => {
   sound.enabled = false;
   document.getElementById('opt-voice-off').classList.add('active');
   document.getElementById('opt-voice-on').classList.remove('active');
+  saveSettings();
 });
 
-// AI 난이도 설정 (아마추어 등급 체계 및 친절한 안내 메시지 & 오디오 음성)
+// AI 난이도 설정 (등급체계 명칭 탈피 및 신규 기력 안내)
 const aiLevelData = {
   easy: {
     id: 'opt-ai-easy',
     val: 'easy',
-    title: '초급 (10급 ~ 6급) 수준 안내',
-    detail: '장기 규칙을 배우시거나 가볍게 즐기시기 좋은 단계입니다. 기본 장기 규칙과 멍군을 충실히 지키며, 어르신께서 시원하게 이기실 수 있도록 편안하게 맞춰둡니다.',
-    speech: '초급을 선택하셨습니다. 장기를 가볍게 즐기시기 좋은 단계입니다.',
+    title: '초급 수준 안내',
+    detail: '기본 포진과 알뜰한 행마로 균형감 있게 겨루는 단계입니다. 기본 장기 규칙과 수비를 지키며 흥미진진한 대국을 즐기실 수 있습니다.',
+    speech: '초급을 선택하셨습니다. 기본 포진과 알뜰한 행마의 흥미진진한 대국입니다.',
     shortTitle: '기력: 초급',
-    shortSub: '(10급~6급)'
+    shortSub: '(정석 행마)'
   },
   mid: {
     id: 'opt-ai-mid',
     val: 'mid',
-    title: '중급 (5급 ~ 2급) 수준 안내',
-    detail: '동네 경로당이나 복지관의 장기 고수 수준입니다! 초반 면포와 마를 정석대로 배치하며, 아군 기물을 알뜰하게 지키며 팽팽한 수싸움을 펼칩니다.',
-    speech: '중급을 선택하셨습니다. 경로당 고수 수준의 팽팽한 대국입니다.',
+    title: '중급 수준 안내',
+    detail: '동네 경로당이나 기원의 장기 고수 수준입니다! 날카로운 수읽기와 탄탄한 궁성 수비로 팽팽한 진검승부를 펼칩니다.',
+    speech: '중급을 선택하셨습니다. 경로당과 기원 고수 수준의 팽팽한 대국입니다.',
     shortTitle: '기력: 중급',
-    shortSub: '(5급~2급)'
+    shortSub: '(기원 고수)'
   },
   hard: {
     id: 'opt-ai-hard',
     val: 'hard',
-    title: '고급 (아마 1급) 수준 안내',
-    detail: '기원 1급 수준의 깊은 수읽기를 자랑합니다! 차와 포의 날카로운 연계 공격과 탄탄한 궁성 수비로 한 수 한 수 진검승부를 펼칩니다.',
-    speech: '고급을 선택하셨습니다. 기원 일급 수준의 깊은 수읽기 대국입니다.',
+    title: '고급 수준 안내',
+    detail: '아마 1급 이상의 특급 고수 수준입니다! 깊은 심층 수읽기와 빈틈없는 공수 연계로 프로에 버금가는 최상의 승부를 펼칩니다.',
+    speech: '고급을 선택하셨습니다. 아마 일급 이상 고수 레벨의 심층 수읽기 대국입니다.',
     shortTitle: '기력: 고급',
-    shortSub: '(아마 1급)'
+    shortSub: '(1급 이상 고수)'
   }
 };
 
@@ -2934,7 +3090,7 @@ function updateAILevelUI(levelKey, playVoice = false) {
   if (titleEl) titleEl.textContent = data.title;
   if (detailEl) detailEl.textContent = data.detail;
 
-  // 홈 화면 라벨 갱신 (1행 / 2행 분리로 줄바꿈 잘림 100% 방지)
+  // 홈 화면 라벨 갱신 (1행 / 2행 분리로 줄바꿈 잘림 방지)
   const homeTitle = document.getElementById('label-ai-level-title');
   const homeSub = document.getElementById('label-ai-level-sub');
   if (homeTitle) homeTitle.textContent = data.shortTitle;
@@ -2944,6 +3100,8 @@ function updateAILevelUI(levelKey, playVoice = false) {
   if (playVoice && sound && typeof sound.speak === 'function') {
     sound.speak(data.speech);
   }
+
+  saveSettings();
 }
 
 // 각 난이도 버튼 클릭 이벤트 연결
@@ -2970,9 +3128,10 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// 최초 보드 초기화 및 난이도 UI 동기화
+// 최초 보드 초기화 및 저장된 환경설정 적용
 game.initBoard(0, 0);
-updateAILevelUI(game.aiLevel, false);
+const initialSettings = loadSettings();
+applySettings(initialSettings);
 </script>
 
 </body>
