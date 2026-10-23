@@ -224,24 +224,54 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin-top: 4px;
+      margin-top: 10px;
+      margin-bottom: 4px;
       text-align: center;
     }
-    .home-app-icon {
-      width: 90px;
-      height: 90px;
-      filter: drop-shadow(0 6px 14px rgba(94, 57, 17, 0.35));
-      margin-bottom: 8px;
-      border-radius: 22px;
+    .home-emblem-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .emblem-piece {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Noto Serif KR', serif;
+      font-size: 19px;
+      font-weight: 900;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.22), inset 0 2px 4px rgba(255,255,255,0.6);
+      border: 2px solid;
+    }
+    .emblem-piece.cho {
+      background: linear-gradient(135deg, #ECFDF5 0%, #A7F3D0 100%);
+      color: #064E3B;
+      border-color: #047857;
+    }
+    .emblem-piece.han {
+      background: linear-gradient(135deg, #FEF2F2 0%, #FECACA 100%);
+      color: #991B1B;
+      border-color: #B91C1C;
+    }
+    .emblem-divider {
+      width: 24px;
+      height: 2.5px;
+      background: linear-gradient(90deg, #047857, #D97706, #B91C1C);
+      border-radius: 2px;
     }
     .home-title {
-      font-size: 32px;
+      font-size: 34px;
       font-weight: 900;
       color: #4A2808;
       font-family: 'Noto Serif KR', serif;
-      letter-spacing: 1px;
-      margin-bottom: 4px;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.12);
       white-space: nowrap;
     }
     .home-subtitle {
@@ -249,10 +279,11 @@
       font-weight: 700;
       color: #78481B;
       background: #F4E4C4;
-      padding: 3px 14px;
+      padding: 4px 16px;
       border-radius: 20px;
       border: 1px solid #DABF8D;
       white-space: nowrap;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.06);
     }
 
     /* 홈 메인 액션 버튼 3종 (초대형) */
@@ -700,7 +731,11 @@
        ============================================================ -->
   <div id="view-home">
     <div class="home-brand-area">
-      <img src="icon.svg" alt="청춘 장기 아이콘" class="home-app-icon">
+      <div class="home-emblem-row">
+        <div class="emblem-piece cho">楚</div>
+        <div class="emblem-divider"></div>
+        <div class="emblem-piece han">漢</div>
+      </div>
       <h1 class="home-title">청 춘 장 기</h1>
       <div class="home-subtitle">어르신을 위한 큰글씨 효도 장기</div>
     </div>
