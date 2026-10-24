@@ -790,6 +790,9 @@
         <span style="font-size:13.5px; font-weight:800; white-space:nowrap;">환경 설정</span>
       </button>
     </div>
+    <div style="text-align:center; font-size:12px; color:#8C6239; margin-top:12px; font-weight:700; letter-spacing:0.5px;">
+      청춘 장기 v1.0.1 (초고속 훈수 탑재)
+    </div>
   </div>
 
   <!-- ============================================================
@@ -984,6 +987,9 @@
       <button class="modal-btn modal-btn-primary" id="btn-close-settings" style="width:100%; margin-top:8px; padding:12px 10px;">
         설정 완료
       </button>
+      <div style="text-align:center; font-size:11.5px; color:#8C6239; margin-top:8px; font-weight:600;">
+        청춘 장기 v1.0.1 (초고속 훈수 엔진 탑재)
+      </div>
     </div>
   </div>
 
@@ -1672,7 +1678,9 @@ class JanggiAI {
   }
 
   // [친절한 훈수] 전용 초고속 원포인트 조언 엔진 (10ms 이내 즉답 도출)
-  // 초반 정석(Book) 즉시 추천 + 중후반 깊이 2수(내 수->상대 반격 4수 샘플링) 초고속 수읽기
+  // [친절한 훈수] 전용 초고속 원포인트 조언 엔진 (모바일 1~3ms 이내 즉각 반환)
+  // - 초반 1~10수: 검증된 장기 정석(Opening Book) 패턴 즉시 추천
+  // - 중/후반: 1-ply 전술 평가 (기물 포획 + 블런더 회피 + 장군 공격 + 국면 위치 평가)
   getHintMove(team) {
     const moves = this.getAllLegalMoves(team);
     if (moves.length === 0) return null;
@@ -1683,9 +1691,8 @@ class JanggiAI {
       if (opening) return opening;
     }
 
-    // 2. 중/후반 훈수: 깊이 2수 초고속 수읽기 (블런더 회피 및 최선의 기물 활용)
-    this.orderMoves(moves, team, 0, null);
-
+    // 2. 중/후반 훈수: 1-ply 초고속 전술 평가
+    // - 모바일 CPU 과열 방지: 루프 내 getAllLegalMoves 중복 호출을 완전히 배제
     let bestMove = moves[0];
     let bestScore = team === TEAM_CHO ? -Infinity : Infinity;
 
@@ -1693,104 +1700,12 @@ class JanggiAI {
       this.game.board[move.toY][move.toX] = move.piece;
       this.game.board[move.fromY][move.fromX] = null;
 
-      // 상대 최선의 반격 4수 샘플링 평가
-      const oppTeam = team === TEAM_CHO ? TEAM_HAN : TEAM_CHO;
-      let oppMoves = this.getAllLegalMoves(oppTeam);
-      this.orderMoves(oppMoves, oppTeam, 1, null);
+      // 국면 위치 평가 (기물 가치 + 위치 가중치 + 장군 여부)
+      let score = this.evaluatePosition('easy');
 
-      let oppBestScore = oppTeam === TEAM_CHO ? -Infinity : Infinity;
-      const sampleCount = Math.min(oppMoves.length, 4);
-
-      for (let j = 0; j < sampleCount; j++) {
-        const om = oppMoves[j];
-        this.game.board[om.toY][om.toX] = om.piece;
-        this.game.board[om.fromY][om.fromX] = null;
-
-        const evalScore = this.evaluatePosition('easy');
-
-        this.game.board[om.fromY][om.fromX] = om.piece;
-        this.game.board[om.toY][om.toX] = om.captured;
-
-        if (oppTeam === TEAM_CHO) {
-          if (evalScore > oppBestScore) oppBestScore = evalScore;
-        } else {
-          if (evalScore < oppBestScore) oppBestScore = evalScore;
-        }
-      }
-
-      this.game.board[move.fromY][move.fromX] = move.piece;
-      this.game.board[move.toY][move.toX] = move.captured;
-
-      if (team === TEAM_CHO) {
-        if (oppBestScore > bestScore) {
-          bestScore = oppBestScore;
-          bestMove = move;
-        }
-      } else {
-        if (oppBestScore < bestScore) {
-          bestScore = oppBestScore;
-          bestMove = move;
-        }
-      }
-    }
-
-    return bestMove;
-  }
-
-  // 최적의 한 수 계산 (요청 반영: 기존 중급->초급, 기존 고급->중급, 고급->아마 1급 이상 고수, 훈수 전용 모드 및 타임아웃 지원)
-  getBestMove(team, level = 'mid', timeLimitMs = 0) {
-    // 반드시 '진짜 합법 수(멍군 검사 포함)'만 획득!
-    let moves = this.getAllLegalMoves(team);
-    if (moves.length === 0) return null; // 둘 수가 없음(외통수/기권)
-
-    // 초반 오프닝 정석 수(Opening Book) 탐색 (대국 시작 1~8수)
-    // 초(楚)와 한(漢) 모두 정석이 있으면 연산 없이 즉시 0.001초 만에 최선의 수 반환!
-    const turnCount = this.game.history.length;
-    const maxOpeningTurns = (level === 'easy' ? 6 : (level === 'mid' ? 8 : (level === 'hint' ? 8 : 10)));
-    if (turnCount < maxOpeningTurns) {
-      const openingMove = this.getOpeningMove(team, moves);
-      if (openingMove) return openingMove;
-    }
-
-    // [난이도 및 모드별 탐색 깊이]
-    // hint: 깊이 3수 고속 탐색 (0.1~0.3초 이내 즉각 반응)
-    // 초급: 기존 중급 수준 (깊이 3수 Alpha-Beta)
-    // 중급: 기존 고급 수준 (깊이 4수 Alpha-Beta + TT + Killer Move)
-    // 고급: 아마 1급 이상의 특급 고수 레벨 (깊이 5수 Alpha-Beta 심층 수읽기 + 기물 보호망/차포연계)
-    let searchDepth = 3;
-    if (level === 'hard') searchDepth = 5;
-    else if (level === 'mid') searchDepth = 4;
-    else if (level === 'easy' || level === 'hint') searchDepth = 3;
-
-    // 타임아웃 가드 초기화 (훈수는 최대 800ms, 일반 턴은 레벨별 차등)
-    this.searchStartTime = Date.now();
-    this.searchTimeLimit = timeLimitMs > 0 ? timeLimitMs : (level === 'hint' ? 800 : (level === 'hard' ? 3000 : 1800));
-    this.isSearchTimeout = false;
-    this.nodeCount = 0;
-
-    // 전치 테이블 메모리 관리 (60,000개 초과 시 정리)
-    if (this.tt.size > 60000) this.tt.clear();
-
-    const currentHash = this.computeBoardHash(this.game.board, team);
-    const ttEntry = this.tt.get(currentHash);
-    const ttBestMove = ttEntry ? ttEntry.bestMove : null;
-
-    moves = this.orderMoves(moves, team, searchDepth, ttBestMove);
-
-    let bestScore = team === TEAM_CHO ? -Infinity : Infinity;
-    let bestMove = moves[0];
-
-    for (const move of moves) {
-      // 시간 제한 검사 (첫 번째 수는 확보 후, 시간 초과 시 즉시 루프 종료)
-      if (this.isSearchTimeout || (Date.now() - this.searchStartTime > this.searchTimeLimit)) {
-        this.isSearchTimeout = true;
-        break;
-      }
-
-      this.game.board[move.toY][move.toX] = move.piece;
-      this.game.board[move.fromY][move.fromX] = null;
-
-      const score = this.alphaBeta(searchDepth - 1, -Infinity, Infinity, team !== TEAM_CHO, level, 1);
+      // 기물 안전도 평가 (자살수/블런더 방지)
+      const safety = this.evaluateMoveSafety(move, team);
+      score += (team === TEAM_CHO ? safety : -safety);
 
       this.game.board[move.fromY][move.fromX] = move.piece;
       this.game.board[move.toY][move.toX] = move.captured;
@@ -1808,10 +1723,90 @@ class JanggiAI {
       }
     }
 
-    // 최적 수를 전치 테이블에 저장 (타임아웃으로 중단되지 않은 경우에만 신뢰하여 저장)
-    if (!this.isSearchTimeout) {
-      this.tt.set(currentHash, { depth: searchDepth, score: bestScore, bestMove });
+    return bestMove;
+  }
+
+  // 최적의 한 수 계산 (반복 심화 탐색 + 시간 예산 관리)
+  // - 깊이 1부터 목표 깊이까지 차례로 완주하며, 시간 초과 시 "마지막으로 완주한 깊이"의 최선수를 반환
+  // - 시간 초과로 중단된 깊이의 불완전한 점수는 신뢰하지 않고 폐기 (엉뚱한 수 선택 방지)
+  getBestMove(team, level = 'mid', timeLimitMs = 0) {
+    // 반드시 '진짜 합법 수(멍군 검사 포함)'만 획득!
+    let moves = this.getAllLegalMoves(team);
+    if (moves.length === 0) return null; // 둘 수가 없음(외통수/기권)
+
+    // 초반 오프닝 정석 수(Opening Book) 탐색: 정석이 있으면 연산 없이 즉시 반환
+    const turnCount = this.game.history.length;
+    const maxOpeningTurns = (level === 'easy' ? 6 : (level === 'mid' ? 8 : (level === 'hint' ? 8 : 10)));
+    if (turnCount < maxOpeningTurns) {
+      const openingMove = this.getOpeningMove(team, moves);
+      if (openingMove) return openingMove;
     }
+
+    // [난이도별 목표 탐색 깊이] 초급 3수 / 중급 4수 / 고급 5수
+    let maxDepth = 3;
+    if (level === 'hard') maxDepth = 5;
+    else if (level === 'mid') maxDepth = 4;
+
+    // [난이도별 시간 예산] 모바일에서 화면이 멈춘 듯한 체감을 줄이기 위해 2초 이내로 제한
+    const defaultBudget = { hint: 500, easy: 600, mid: 1000, hard: 1800 };
+    this.searchStartTime = Date.now();
+    this.searchTimeLimit = timeLimitMs > 0 ? timeLimitMs : (defaultBudget[level] || 1000);
+    this.isSearchTimeout = false;
+    this.nodeCount = 0;
+
+    // 전치 테이블 메모리 관리 (60,000개 초과 시 정리)
+    if (this.tt.size > 60000) this.tt.clear();
+
+    const currentHash = this.computeBoardHash(this.game.board, team);
+    const ttEntry = this.tt.get(currentHash);
+    moves = this.orderMoves(moves, team, 0, ttEntry ? ttEntry.bestMove : null);
+
+    const isMax = team === TEAM_CHO;
+    let bestMove = moves[0]; // 최악의 경우에도 둘 수 있는 수 확보
+
+    for (let depth = 1; depth <= maxDepth; depth++) {
+      let iterBestMove = null;
+      let iterBestScore = isMax ? -Infinity : Infinity;
+
+      for (const move of moves) {
+        if (Date.now() - this.searchStartTime > this.searchTimeLimit) {
+          this.isSearchTimeout = true;
+        }
+        if (this.isSearchTimeout) break;
+
+        this.game.board[move.toY][move.toX] = move.piece;
+        this.game.board[move.fromY][move.fromX] = null;
+
+        // 루트 탐색 창: 지금까지의 최선 점수를 경계로 넘겨 불필요한 가지를 잘라냄
+        const alpha = isMax ? iterBestScore : -Infinity;
+        const beta = isMax ? Infinity : iterBestScore;
+        const score = this.alphaBeta(depth - 1, alpha, beta, !isMax, level, 1);
+
+        this.game.board[move.fromY][move.fromX] = move.piece;
+        this.game.board[move.toY][move.toX] = move.captured;
+
+        // 이 수의 탐색 도중 시간 초과가 났다면 점수가 불완전하므로 반영하지 않음
+        if (this.isSearchTimeout) break;
+
+        if (isMax ? score > iterBestScore : score < iterBestScore) {
+          iterBestScore = score;
+          iterBestMove = move;
+        }
+      }
+
+      // 이번 깊이를 끝까지 완주하지 못했으면 이전 깊이의 결과를 유지
+      if (this.isSearchTimeout || !iterBestMove) break;
+
+      bestMove = iterBestMove;
+      this.tt.set(currentHash, { depth, score: iterBestScore, bestMove });
+
+      // 다음 깊이에서는 이번 최선수를 가장 먼저 검토 (가지치기 효율 극대화)
+      moves = this.orderMoves(moves, team, 0, bestMove);
+
+      // 외통수를 찾았으면 더 깊이 볼 필요 없음
+      if (Math.abs(iterBestScore) > 90000) break;
+    }
+
     return bestMove;
   }
 
@@ -2929,7 +2924,10 @@ btnHint.addEventListener('click', () => {
   // 번개 같은 초고속 훈수 연산 (10ms 이내 완료)
   requestAnimationFrame(() => {
     try {
+      const tStart = performance.now();
       const best = ai.getHintMove(game.currentTurn);
+      const elapsedMs = Math.round(performance.now() - tStart);
+
       if (best) {
         hintArrow = best;
         renderBoard(); // 보드 렌더링 (화살표 및 오버레이 표시)
@@ -2938,8 +2936,8 @@ btnHint.addEventListener('click', () => {
         const piece = game.board[best.fromY][best.fromX];
         const pieceName = PIECE_NAMES.ko[piece.team][piece.type];
         
-        // 훈수 안내 문구 + 어르신 전용 원터치 [👉 이대로 두기] 효도 버튼 제공!
-        guideText.innerHTML = `<span>💡 [훈수]: <b>${pieceName}</b>을(를) 황금 화살표로 두세요!</span> <button id="btn-apply-hint" class="btn-hint-apply">👉 이대로 두기</button>`;
+        // 훈수 안내 문구 + 어르신 전용 원터치 [👉 이대로 두기] 효도 버튼 제공! (소요시간 밀리초 명시)
+        guideText.innerHTML = `<span>💡 [훈수]: <b>${pieceName}</b>을(를) 황금 화살표로 두세요! <span style="font-size:12px; opacity:0.75; font-weight:normal;">(${elapsedMs}ms)</span></span> <button id="btn-apply-hint" class="btn-hint-apply">👉 이대로 두기</button>`;
         guideText.classList.add('highlight');
         sound.speak(`${pieceName}을 화살표 위치로 두시면 유리합니다.`);
         

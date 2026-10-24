@@ -85,13 +85,15 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                 setSupportZoom(false)
                 displayZoomControls = false
                 mediaPlaybackRequiresUserGesture = false
-                cacheMode = WebSettings.LOAD_DEFAULT
+                cacheMode = WebSettings.LOAD_NO_CACHE
                 allowFileAccess = true
                 allowContentAccess = true
 
                 // 스마트폰 시스템 글자 크기(150%~200%) 강제 확대를 100% 무시하고 앱 고유의 큰글씨 황금 레이아웃으로 독립 고정
                 textZoom = 100
             }
+
+            clearCache(true)
 
             // 자바스크립트 브릿지 등록
             addJavascriptInterface(AndroidTTSBridge(), "AndroidBridge")
