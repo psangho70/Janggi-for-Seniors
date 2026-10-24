@@ -88,6 +88,9 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                 cacheMode = WebSettings.LOAD_DEFAULT
                 allowFileAccess = true
                 allowContentAccess = true
+
+                // 스마트폰 시스템 글자 크기(150%~200%) 강제 확대를 100% 무시하고 앱 고유의 큰글씨 황금 레이아웃으로 독립 고정
+                textZoom = 100
             }
 
             // 자바스크립트 브릿지 등록
