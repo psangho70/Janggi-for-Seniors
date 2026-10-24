@@ -186,6 +186,33 @@
     }
 
     /* 훈수 즉시 실행 버튼 & 로딩 애니메이션 */
+    .hint-msg-box {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+      vertical-align: middle;
+    }
+    .hint-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #78350F 0%, #451A03 100%);
+      color: #FDE68A;
+      border: 1px solid #F59E0B;
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 12.5px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      vertical-align: middle;
+    }
+    .hint-text {
+      font-size: 14px;
+      font-weight: 700;
+      color: #451A03;
+      vertical-align: middle;
+    }
     .btn-hint-apply {
       background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
       color: #FFF;
@@ -1677,10 +1704,10 @@ class JanggiAI {
     return moves.sort((a, b) => b.orderScore - a.orderScore);
   }
 
-  // [친절한 훈수] 전용 초고속 원포인트 조언 엔진 (10ms 이내 즉답 도출)
   // [친절한 훈수] 전용 초고속 원포인트 조언 엔진 (모바일 1~3ms 이내 즉각 반환)
   // - 초반 1~10수: 검증된 장기 정석(Opening Book) 패턴 즉시 추천
   // - 중/후반: 1-ply 전술 평가 (기물 포획 + 블런더 회피 + 장군 공격 + 국면 위치 평가)
+  // - 타 장기앱(장기도사, 체스닷컴 코치) 벤치마킹: 명확한 전술 뱃지와 친절한 이유 설명 제공
   getHintMove(team) {
     const moves = this.getAllLegalMoves(team);
     if (moves.length === 0) return null;
@@ -1688,7 +1715,7 @@ class JanggiAI {
     // 1. 초반 1~10수: 장기 정석(Opening Book) 패턴 즉시 반환 (0.001초 이내)
     if (this.game.history.length < 10) {
       const opening = this.getOpeningMove(team, moves);
-      if (opening) return opening;
+      if (opening) return this.enrichMoveWithTacticalReason(opening, team);
     }
 
     // 2. 중/후반 훈수: 1-ply 초고속 전술 평가
@@ -1723,7 +1750,111 @@ class JanggiAI {
       }
     }
 
-    return bestMove;
+    return this.enrichMoveWithTacticalReason(bestMove, team);
+  }
+
+  // 훈수 수순에 전술적 해설 및 시각 뱃지 태깅 (장기도사/체스닷컴 코칭 시스템 벤치마킹)
+  enrichMoveWithTacticalReason(move, team) {
+    if (!move) return null;
+    if (move.badge && move.reason) return move; // 이미 오프닝에서 정밀 설정된 경우
+
+    const oppTeam = team === TEAM_CHO ? TEAM_HAN : TEAM_CHO;
+    const piece = move.piece;
+    const pieceName = PIECE_NAMES.ko[piece.team][piece.type];
+
+    // 가상 착수 후 장군(Check) 여부 분석
+    this.game.board[move.toY][move.toX] = move.piece;
+    this.game.board[move.fromY][move.fromX] = null;
+    const isCheckMove = this.game.isCheck(oppTeam);
+    this.game.board[move.fromY][move.fromX] = move.piece;
+    this.game.board[move.toY][move.toX] = move.captured;
+
+    // 1. 장군(Check) 공격인 경우
+    if (isCheckMove) {
+      return {
+        ...move,
+        badge: '⚡ 장군 공세',
+        reason: '장군을 불러 상대 궁성을 흔들고 주도권을 장악합니다!',
+        speechText: '장군을 불러 상대를 강하게 압박합니다.'
+      };
+    }
+
+    // 2. 상대 기물 포획(Capture) 득점인 경우
+    if (move.captured) {
+      const capName = PIECE_NAMES.ko[move.captured.team][move.captured.type];
+      return {
+        ...move,
+        badge: '⚔️ 기물 득점',
+        reason: `상대 ${capName}을(를) 잡아 전세를 크게 유리하게 만듭니다!`,
+        speechText: `상대 ${capName}을 잡아 큰 이득을 챙깁니다.`
+      };
+    }
+
+    // 3. 아군 기물 위험 회피(Escape)인 경우
+    const safetyBonus = this.evaluateMoveSafety(move, team);
+    if (safetyBonus > 300) {
+      return {
+        ...move,
+        badge: '🛡️ 위험 회피',
+        reason: `위협받던 ${pieceName}을(를) 안전한 명당으로 신속히 피신시킵니다!`,
+        speechText: `위험에 노출된 ${pieceName}을 안전하게 피신시킵니다.`
+      };
+    }
+
+    // 4. 궁성 수비 및 정돈(Palace Defense)
+    if (piece.type === TYPE_KING || piece.type === TYPE_ADVISOR) {
+      return {
+        ...move,
+        badge: '🏰 궁성 단속',
+        reason: '궁성을 정돈하여 상대의 기습 공격을 철통 방어합니다.',
+        speechText: '궁성을 정돈하여 수비를 굳힙니다.'
+      };
+    }
+
+    // 5. 차/마/상 요충지 진출
+    if (piece.type === TYPE_CAR) {
+      return {
+        ...move,
+        badge: '🚀 차(車) 돌파',
+        reason: '가장 강력한 차를 요충지로 전진시켜 적진을 정조준합니다!',
+        speechText: '차를 전진시켜 적진을 정조준합니다.'
+      };
+    }
+
+    if (piece.type === TYPE_HORSE) {
+      return {
+        ...move,
+        badge: '🐎 마(馬) 도약',
+        reason: '마를 중앙 명당으로 도약시켜 종횡무진 기동력을 발휘합니다.',
+        speechText: '마를 좋은 자리로 이동시켜 기동력을 높입니다.'
+      };
+    }
+
+    if (piece.type === TYPE_ELEPHANT) {
+      return {
+        ...move,
+        badge: '🐘 상(象) 전진',
+        reason: '상을 진출시켜 상대 진영의 허점을 노리고 길목을 차단합니다.',
+        speechText: '상을 진출시켜 상대 길목을 차단합니다.'
+      };
+    }
+
+    if (piece.type === TYPE_PAWN) {
+      return {
+        ...move,
+        badge: '🏹 전선 전진',
+        reason: '병을 전진시켜 상대 진영을 옥죄고 압박망을 좁힙니다.',
+        speechText: '병을 전진시켜 압박망을 좁힙니다.'
+      };
+    }
+
+    // 6. 기본 명당 선점
+    return {
+      ...move,
+      badge: '💡 명당 선점',
+      reason: `${pieceName}의 활로를 틔우고 전열을 가다듬는 좋은 수입니다.`,
+      speechText: `${pieceName}을 두어 국면을 유리하게 이끕니다.`
+    };
   }
 
   // 최적의 한 수 계산 (반복 심화 탐색 + 시간 예산 관리)
@@ -1810,40 +1941,96 @@ class JanggiAI {
     return bestMove;
   }
 
-  // 오프닝 정석 수(Opening Book) 패턴 추출 (초/한 양방향 완벽 지원)
+  // 오프닝 정석 수(Opening Book) 패턴 추출 (초/한 양방향 완벽 지원 + 전술 해설 탑재)
   getOpeningMove(team, moves) {
     if (team === TEAM_CHO) {
       // 1. 초(楚) 면포 안착: 포(包)를 궁성 중앙(x=4, y=2)으로 이동하는 수
       const cannonToCenter = moves.find(m => m.piece.type === TYPE_CANNON && m.toX === 4 && m.toY === 2);
-      if (cannonToCenter) return cannonToCenter;
+      if (cannonToCenter) {
+        return {
+          ...cannonToCenter,
+          badge: '🏰 면포 안착',
+          reason: '포를 중앙에 안착시켜 상대 궁성을 정조준하고 수비를 굳힙니다.',
+          speechText: '포를 중앙에 안착시켜 상대 궁성을 정조준합니다.'
+        };
+      }
 
       // 2. 초(楚) 귀마/진마 진출: 마(馬)를 궁성 귀(x=2, 3, 5, 6, y=2)로 진출시키는 수
       const horseAdvance = moves.find(m => m.piece.type === TYPE_HORSE && (m.toX === 2 || m.toX === 3 || m.toX === 5 || m.toX === 6) && m.toY === 2);
-      if (horseAdvance) return horseAdvance;
+      if (horseAdvance) {
+        return {
+          ...horseAdvance,
+          badge: '🐎 귀마 진출',
+          reason: '귀마를 올려 중앙 기물들과 든든한 협공망을 구축합니다.',
+          speechText: '귀마를 올려 든든한 방어선을 짭니다.'
+        };
+      }
 
       // 3. 초(楚) 차길 열기: 졸(卒)을 안쪽으로 모으는 합졸 수
       const pawnOpen = moves.find(m => m.piece.type === TYPE_PAWN && (m.toX === 1 || m.toX === 7) && m.toY === 3);
-      if (pawnOpen) return pawnOpen;
+      if (pawnOpen) {
+        return {
+          ...pawnOpen,
+          badge: '🚗 차길 열기',
+          reason: '졸을 안으로 쓸어 가장 강력한 차(車)의 활로를 시원하게 엽니다.',
+          speechText: '졸을 쓸어 차의 활로를 시원하게 엽니다.'
+        };
+      }
 
       // 4. 초(楚) 중앙 상 진출
       const elephantAdvance = moves.find(m => m.piece.type === TYPE_ELEPHANT && (m.toX === 2 || m.toX === 4 || m.toX === 6) && m.toY === 4);
-      if (elephantAdvance) return elephantAdvance;
+      if (elephantAdvance) {
+        return {
+          ...elephantAdvance,
+          badge: '🐘 상(象) 진출',
+          reason: '상을 전진시켜 상대 진영의 허점을 노리고 길목을 압박합니다.',
+          speechText: '상을 진출시켜 상대 진영을 압박합니다.'
+        };
+      }
     } else if (team === TEAM_HAN) {
       // 1. 한(漢) 면포 안착: 포(包)를 궁성 중앙(x=4, y=7)으로 이동하는 수
       const cannonToCenterHan = moves.find(m => m.piece.type === TYPE_CANNON && m.toX === 4 && m.toY === 7);
-      if (cannonToCenterHan) return cannonToCenterHan;
+      if (cannonToCenterHan) {
+        return {
+          ...cannonToCenterHan,
+          badge: '🏰 면포 안착',
+          reason: '포를 중앙에 안착시켜 상대 궁성을 정조준하고 수비를 굳힙니다.',
+          speechText: '포를 중앙에 안착시켜 상대 궁성을 정조준합니다.'
+        };
+      }
 
       // 2. 한(漢) 귀마/진마 진출: 마(馬)를 궁성 귀(x=2, 3, 5, 6, y=7)로 진출시키는 수
       const horseAdvanceHan = moves.find(m => m.piece.type === TYPE_HORSE && (m.toX === 2 || m.toX === 3 || m.toX === 5 || m.toX === 6) && m.toY === 7);
-      if (horseAdvanceHan) return horseAdvanceHan;
+      if (horseAdvanceHan) {
+        return {
+          ...horseAdvanceHan,
+          badge: '🐎 귀마 진출',
+          reason: '귀마를 올려 중앙 기물들과 든든한 협공망을 구축합니다.',
+          speechText: '귀마를 올려 든든한 방어선을 짭니다.'
+        };
+      }
 
       // 3. 한(漢) 차길 열기: 병(兵)을 안쪽으로 모으는 합병 수
       const pawnOpenHan = moves.find(m => m.piece.type === TYPE_PAWN && (m.toX === 1 || m.toX === 7) && m.toY === 6);
-      if (pawnOpenHan) return pawnOpenHan;
+      if (pawnOpenHan) {
+        return {
+          ...pawnOpenHan,
+          badge: '🚗 차길 열기',
+          reason: '병을 안으로 쓸어 가장 강력한 차(車)의 활로를 시원하게 엽니다.',
+          speechText: '병을 쓸어 차의 활로를 시원하게 엽니다.'
+        };
+      }
 
       // 4. 한(漢) 중앙 상 진출
       const elephantAdvanceHan = moves.find(m => m.piece.type === TYPE_ELEPHANT && (m.toX === 2 || m.toX === 4 || m.toX === 6) && m.toY === 5);
-      if (elephantAdvanceHan) return elephantAdvanceHan;
+      if (elephantAdvanceHan) {
+        return {
+          ...elephantAdvanceHan,
+          badge: '🐘 상(象) 진출',
+          reason: '상을 전진시켜 상대 진영의 허점을 노리고 길목을 압박합니다.',
+          speechText: '상을 진출시켜 상대 진영을 압박합니다.'
+        };
+      }
     }
     return null;
   }
@@ -2486,22 +2673,33 @@ function drawHintOverlay(hint, pulsePhase = 0) {
 
   ctx.save();
 
-  // --- [1] 출발지 (Origin) 은은한 황금 오라 & 듀얼 링 ---
-  const auraRad = pieceRadius * (1.18 + 0.08 * Math.sin(pulsePhase));
-  const auraGrad = ctx.createRadialGradient(x1, y1, pieceRadius * 0.4, x1, y1, auraRad);
-  auraGrad.addColorStop(0, 'rgba(245, 158, 11, 0.45)');
-  auraGrad.addColorStop(0.7, 'rgba(251, 191, 36, 0.2)');
+  const isCapture = !!hint.captured;
+
+  // --- [1] 출발지 (Origin) 은은한 황금 오라 & 듀얼 펄스 링 (어르신 맞춤형 출발 기물 강조) ---
+  const auraRad = pieceRadius * (1.2 + 0.1 * Math.sin(pulsePhase));
+  const auraGrad = ctx.createRadialGradient(x1, y1, pieceRadius * 0.3, x1, y1, auraRad);
+  auraGrad.addColorStop(0, 'rgba(245, 158, 11, 0.55)');
+  auraGrad.addColorStop(0.7, 'rgba(251, 191, 36, 0.25)');
   auraGrad.addColorStop(1, 'rgba(245, 158, 11, 0)');
   ctx.fillStyle = auraGrad;
   ctx.beginPath();
   ctx.arc(x1, y1, auraRad, 0, Math.PI * 2);
   ctx.fill();
 
-  // 출발 기물 외곽 골드 링
+  // 출발 기물 외곽 골드 맥박 링 (Pulse Wave Ring)
+  const pulseWaveRad = pieceRadius * (1.1 + 0.25 * ((Math.sin(pulsePhase) + 1) / 2));
+  const pulseAlpha = 0.6 * (1 - ((Math.sin(pulsePhase) + 1) / 2) * 0.7);
+  ctx.strokeStyle = `rgba(245, 158, 11, ${pulseAlpha})`;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(x1, y1, pulseWaveRad, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // 출발 기물 테두리 밀착 하이라이트 골드 링
   ctx.shadowColor = '#F59E0B';
-  ctx.shadowBlur = 10;
+  ctx.shadowBlur = 12;
   ctx.strokeStyle = '#FBBF24';
-  ctx.lineWidth = 3.5;
+  ctx.lineWidth = 4.5;
   ctx.beginPath();
   ctx.arc(x1, y1, pieceRadius * 1.05, 0, Math.PI * 2);
   ctx.stroke();
@@ -2512,7 +2710,7 @@ function drawHintOverlay(hint, pulsePhase = 0) {
   ctx.strokeStyle = '#D97706';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(x1, y1, 5, 0, Math.PI * 2);
+  ctx.arc(x1, y1, 5.5, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
 
@@ -2573,8 +2771,8 @@ function drawHintOverlay(hint, pulsePhase = 0) {
   const indentY = y2 - (arrowLen * 0.65) * Math.sin(angle);
 
   // 화살촉 외곽선 (마호가니 테두리)
-  ctx.shadowColor = '#F59E0B';
-  ctx.shadowBlur = 12;
+  ctx.shadowColor = isCapture ? '#EF4444' : '#F59E0B';
+  ctx.shadowBlur = 14;
   ctx.strokeStyle = '#2B1404';
   ctx.lineWidth = 3.5;
   ctx.lineJoin = 'round';
@@ -2620,22 +2818,28 @@ function drawHintOverlay(hint, pulsePhase = 0) {
   ctx.lineTo(indentX, indentY);
   ctx.stroke();
 
-  // --- [4] 도착지 보석 타깃 (Crosshair Jewel Target) ---
-  const targetR = pieceRadius * (0.85 + 0.06 * Math.sin(pulsePhase * 1.5));
+  // --- [4] 도착지 타깃 (기물 포획 시 루비 레드 🎯 vs 일반 이동 시 황금 골드 링 💎) ---
+  const targetR = pieceRadius * (0.88 + 0.07 * Math.sin(pulsePhase * 1.5));
 
-  // 타깃 영역 은은한 방사형 채움
+  // 타깃 영역 방사형 채움
   const targetGrad = ctx.createRadialGradient(x2, y2, 0, x2, y2, targetR);
-  targetGrad.addColorStop(0, 'rgba(251, 191, 36, 0.35)');
-  targetGrad.addColorStop(0.7, 'rgba(245, 158, 11, 0.15)');
-  targetGrad.addColorStop(1, 'rgba(245, 158, 11, 0)');
+  if (isCapture) {
+    targetGrad.addColorStop(0, 'rgba(239, 68, 68, 0.45)');
+    targetGrad.addColorStop(0.7, 'rgba(220, 38, 38, 0.2)');
+    targetGrad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+  } else {
+    targetGrad.addColorStop(0, 'rgba(251, 191, 36, 0.35)');
+    targetGrad.addColorStop(0.7, 'rgba(245, 158, 11, 0.15)');
+    targetGrad.addColorStop(1, 'rgba(245, 158, 11, 0)');
+  }
   ctx.fillStyle = targetGrad;
   ctx.beginPath();
   ctx.arc(x2, y2, targetR, 0, Math.PI * 2);
   ctx.fill();
 
-  // 타깃 회전 점선 골드 링
-  ctx.strokeStyle = '#FBBF24';
-  ctx.lineWidth = 2.5;
+  // 타깃 회전 점선 링
+  ctx.strokeStyle = isCapture ? '#EF4444' : '#FBBF24';
+  ctx.lineWidth = isCapture ? 3.2 : 2.5;
   ctx.setLineDash([6, 4]);
   ctx.lineDashOffset = -pulsePhase * 4;
   ctx.beginPath();
@@ -2644,10 +2848,10 @@ function drawHintOverlay(hint, pulsePhase = 0) {
   ctx.setLineDash([]);
 
   // 4방향 세련된 조준선 틱(Crosshair Ticks)
-  const tickInner = targetR - 5;
-  const tickOuter = targetR + 6;
-  ctx.strokeStyle = '#F59E0B';
-  ctx.lineWidth = 2.5;
+  const tickInner = targetR - 6;
+  const tickOuter = targetR + 7;
+  ctx.strokeStyle = isCapture ? '#DC2626' : '#F59E0B';
+  ctx.lineWidth = 3.0;
   const dirs = [0, Math.PI / 2, Math.PI, (Math.PI * 3) / 2];
   for (const d of dirs) {
     ctx.beginPath();
@@ -2657,11 +2861,11 @@ function drawHintOverlay(hint, pulsePhase = 0) {
   }
 
   // 타깃 정중앙 작은 보석 점
-  ctx.fillStyle = '#FEF08A';
-  ctx.strokeStyle = '#B45309';
-  ctx.lineWidth = 1.5;
+  ctx.fillStyle = isCapture ? '#FEE2E2' : '#FEF08A';
+  ctx.strokeStyle = isCapture ? '#991B1B' : '#B45309';
+  ctx.lineWidth = 1.8;
   ctx.beginPath();
-  ctx.arc(x2, y2, 4.5, 0, Math.PI * 2);
+  ctx.arc(x2, y2, 5.0, 0, Math.PI * 2);
   ctx.fill();
   ctx.stroke();
 
@@ -2924,22 +3128,26 @@ btnHint.addEventListener('click', () => {
   // 번개 같은 초고속 훈수 연산 (10ms 이내 완료)
   requestAnimationFrame(() => {
     try {
-      const tStart = performance.now();
       const best = ai.getHintMove(game.currentTurn);
-      const elapsedMs = Math.round(performance.now() - tStart);
 
       if (best) {
         hintArrow = best;
-        renderBoard(); // 보드 렌더링 (화살표 및 오버레이 표시)
+        renderBoard(); // 보드 렌더링 (화살표, 펄스 링, 타깃 오버레이 표시)
         startHintAnimation(); // 부드러운 펄스 애니메이션 시작
 
         const piece = game.board[best.fromY][best.fromX];
         const pieceName = PIECE_NAMES.ko[piece.team][piece.type];
         
-        // 훈수 안내 문구 + 어르신 전용 원터치 [👉 이대로 두기] 효도 버튼 제공! (소요시간 밀리초 명시)
-        guideText.innerHTML = `<span>💡 [훈수]: <b>${pieceName}</b>을(를) 황금 화살표로 두세요! <span style="font-size:12px; opacity:0.75; font-weight:normal;">(${elapsedMs}ms)</span></span> <button id="btn-apply-hint" class="btn-hint-apply">👉 이대로 두기</button>`;
+        // 타 장기앱(장기도사, 체스닷컴 코치) 벤치마킹: 전술 뱃지 + 친절한 수 해설 + 원터치 [👉 이대로 두기] 버튼
+        guideText.innerHTML = `
+          <div class="hint-msg-box">
+            <span class="hint-badge">${best.badge || '💡 훈수'}</span>
+            <span class="hint-text"><b>${pieceName}</b>: ${best.reason || '화살표 위치로 두시면 유리합니다.'}</span>
+          </div>
+          <button id="btn-apply-hint" class="btn-hint-apply">👉 이대로 두기</button>
+        `;
         guideText.classList.add('highlight');
-        sound.speak(`${pieceName}을 화살표 위치로 두시면 유리합니다.`);
+        sound.speak(best.speechText || `${pieceName}을 화살표 위치로 두시면 유리합니다.`);
         
         // [👉 이대로 두기] 버튼 이벤트 바인딩
         const applyBtn = document.getElementById('btn-apply-hint');
