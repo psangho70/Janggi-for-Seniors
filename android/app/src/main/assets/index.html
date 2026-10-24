@@ -1558,6 +1558,12 @@ class JanggiAI {
     this.initZobrist();
     this.tt = new Map(); // 전치 테이블 캐시 (국면 해시 -> { depth, score, flag, bestMove })
     this.killerMoves = Array.from({ length: 6 }, () => [null, null]); // 깊이별 킬러 무브
+    
+    // 연산 시간 제어 및 무한 프리징 방지 타임아웃 가드 변수
+    this.searchStartTime = 0;
+    this.searchTimeLimit = 0;
+    this.isSearchTimeout = false;
+    this.nodeCount = 0;
   }
 
   // 32비트 무작위 정수 생성기
@@ -1686,25 +1692,36 @@ class JanggiAI {
     });
   }
 
-  // 최적의 한 수 계산 (요청 반영: 기존 중급->초급, 기존 고급->중급, 고급->아마 1급 이상 고수)
-  getBestMove(team, level = 'mid') {
+  // 최적의 한 수 계산 (요청 반영: 기존 중급->초급, 기존 고급->중급, 고급->아마 1급 이상 고수, 훈수 전용 모드 및 타임아웃 지원)
+  getBestMove(team, level = 'mid', timeLimitMs = 0) {
     // 반드시 '진짜 합법 수(멍군 검사 포함)'만 획득!
     let moves = this.getAllLegalMoves(team);
     if (moves.length === 0) return null; // 둘 수가 없음(외통수/기권)
 
     // 초반 오프닝 정석 수(Opening Book) 탐색 (대국 시작 1~8수)
+    // 초(楚)와 한(漢) 모두 정석이 있으면 연산 없이 즉시 0.001초 만에 최선의 수 반환!
     const turnCount = this.game.history.length;
-    const maxOpeningTurns = (level === 'easy' ? 6 : (level === 'mid' ? 8 : 10));
+    const maxOpeningTurns = (level === 'easy' ? 6 : (level === 'mid' ? 8 : (level === 'hint' ? 8 : 10)));
     if (turnCount < maxOpeningTurns) {
       const openingMove = this.getOpeningMove(team, moves);
       if (openingMove) return openingMove;
     }
 
-    // [난이도별 탐색 깊이]
+    // [난이도 및 모드별 탐색 깊이]
+    // hint: 깊이 3수 고속 탐색 (0.1~0.3초 이내 즉각 반응)
     // 초급: 기존 중급 수준 (깊이 3수 Alpha-Beta)
     // 중급: 기존 고급 수준 (깊이 4수 Alpha-Beta + TT + Killer Move)
     // 고급: 아마 1급 이상의 특급 고수 레벨 (깊이 5수 Alpha-Beta 심층 수읽기 + 기물 보호망/차포연계)
-    const searchDepth = (level === 'hard') ? 5 : (level === 'mid' ? 4 : 3);
+    let searchDepth = 3;
+    if (level === 'hard') searchDepth = 5;
+    else if (level === 'mid') searchDepth = 4;
+    else if (level === 'easy' || level === 'hint') searchDepth = 3;
+
+    // 타임아웃 가드 초기화 (훈수는 최대 800ms, 일반 턴은 레벨별 차등)
+    this.searchStartTime = Date.now();
+    this.searchTimeLimit = timeLimitMs > 0 ? timeLimitMs : (level === 'hint' ? 800 : (level === 'hard' ? 3000 : 1800));
+    this.isSearchTimeout = false;
+    this.nodeCount = 0;
 
     // 전치 테이블 메모리 관리 (60,000개 초과 시 정리)
     if (this.tt.size > 60000) this.tt.clear();
@@ -1719,6 +1736,12 @@ class JanggiAI {
     let bestMove = moves[0];
 
     for (const move of moves) {
+      // 시간 제한 검사 (첫 번째 수는 확보 후, 시간 초과 시 즉시 루프 종료)
+      if (this.isSearchTimeout || (Date.now() - this.searchStartTime > this.searchTimeLimit)) {
+        this.isSearchTimeout = true;
+        break;
+      }
+
       this.game.board[move.toY][move.toX] = move.piece;
       this.game.board[move.fromY][move.fromX] = null;
 
@@ -1740,31 +1763,52 @@ class JanggiAI {
       }
     }
 
-    // 최적 수를 전치 테이블에 저장
-    this.tt.set(currentHash, { depth: searchDepth, score: bestScore, bestMove });
+    // 최적 수를 전치 테이블에 저장 (타임아웃으로 중단되지 않은 경우에만 신뢰하여 저장)
+    if (!this.isSearchTimeout) {
+      this.tt.set(currentHash, { depth: searchDepth, score: bestScore, bestMove });
+    }
     return bestMove;
   }
 
-  // 오프닝 정석 수(Opening Book) 패턴 추출
+  // 오프닝 정석 수(Opening Book) 패턴 추출 (초/한 양방향 완벽 지원)
   getOpeningMove(team, moves) {
     if (team === TEAM_CHO) {
-      // 1. 면포 안착: 포(包)를 궁성 중앙(x=4, y=2)으로 이동하는 수가 있으면 최우선 실행!
+      // 1. 초(楚) 면포 안착: 포(包)를 궁성 중앙(x=4, y=2)으로 이동하는 수가 있으면 최우선 실행!
       const cannonToCenter = moves.find(m => m.piece.type === TYPE_CANNON && m.toX === 4 && m.toY === 2);
       if (cannonToCenter) return cannonToCenter;
 
-      // 2. 귀마 진출: 마(馬)를 중앙으로 진출시키는 수 (x=2 or 6, y=2)
+      // 2. 초(楚) 귀마 진출: 마(馬)를 중앙으로 진출시키는 수 (x=2 or 6, y=2)
       const horseAdvance = moves.find(m => m.piece.type === TYPE_HORSE && (m.toX === 2 || m.toX === 6) && m.toY === 2);
       if (horseAdvance) return horseAdvance;
 
-      // 3. 차길 열기: 졸(卒)을 안쪽으로 모으는 합졸 수
+      // 3. 초(楚) 차길 열기: 졸(卒)을 안쪽으로 모으는 합졸 수
       const pawnOpen = moves.find(m => m.piece.type === TYPE_PAWN && (m.toX === 1 || m.toX === 7) && m.toY === 3);
       if (pawnOpen) return pawnOpen;
+    } else if (team === TEAM_HAN) {
+      // 1. 한(漢) 면포 안착: 포(包)를 궁성 중앙(x=4, y=7)으로 이동하는 수가 있으면 최우선 실행!
+      const cannonToCenterHan = moves.find(m => m.piece.type === TYPE_CANNON && m.toX === 4 && m.toY === 7);
+      if (cannonToCenterHan) return cannonToCenterHan;
+
+      // 2. 한(漢) 귀마 진출: 마(馬)를 중앙으로 진출시키는 수 (x=2 or 6, y=7)
+      const horseAdvanceHan = moves.find(m => m.piece.type === TYPE_HORSE && (m.toX === 2 || m.toX === 6) && m.toY === 7);
+      if (horseAdvanceHan) return horseAdvanceHan;
+
+      // 3. 한(漢) 차길 열기: 병(兵)을 안쪽으로 모으는 합병 수
+      const pawnOpenHan = moves.find(m => m.piece.type === TYPE_PAWN && (m.toX === 1 || m.toX === 7) && m.toY === 6);
+      if (pawnOpenHan) return pawnOpenHan;
     }
     return null;
   }
 
-  // Alpha-Beta 재귀 탐색 (2단계 전치 테이블 및 킬러 무브 연동)
+  // Alpha-Beta 재귀 탐색 (2단계 전치 테이블 및 킬러 무브 연동, 타임아웃 긴급 탈출 가드 탑재)
   alphaBeta(depth, alpha, beta, isMaximizing, level, ply = 0) {
+    // 타임아웃 가드: 128 노드마다 한 번씩 시간 체크하여 연산 폭증 및 프리징 방지
+    this.nodeCount++;
+    if (this.isSearchTimeout || ((this.nodeCount & 127) === 0 && Date.now() - this.searchStartTime > this.searchTimeLimit)) {
+      this.isSearchTimeout = true;
+      return this.evaluatePosition(level);
+    }
+
     const team = isMaximizing ? TEAM_CHO : TEAM_HAN;
 
     // 1. 전치 테이블(Transposition Table) 조회
@@ -1797,6 +1841,8 @@ class JanggiAI {
     if (isMaximizing) {
       let maxEval = -Infinity;
       for (const m of moves) {
+        if (this.isSearchTimeout) break;
+
         this.game.board[m.toY][m.toX] = m.piece;
         this.game.board[m.fromY][m.fromX] = null;
 
@@ -1821,15 +1867,19 @@ class JanggiAI {
       }
 
       // 전치 테이블 저장
-      let flag = 'EXACT';
-      if (maxEval <= originalAlpha) flag = 'UPPERBOUND';
-      else if (maxEval >= beta) flag = 'LOWERBOUND';
-      this.tt.set(hash, { depth, score: maxEval, flag, bestMove: bestMoveAtThisNode });
+      if (!this.isSearchTimeout) {
+        let flag = 'EXACT';
+        if (maxEval <= originalAlpha) flag = 'UPPERBOUND';
+        else if (maxEval >= beta) flag = 'LOWERBOUND';
+        this.tt.set(hash, { depth, score: maxEval, flag, bestMove: bestMoveAtThisNode });
+      }
 
       return maxEval;
     } else {
       let minEval = Infinity;
       for (const m of moves) {
+        if (this.isSearchTimeout) break;
+
         this.game.board[m.toY][m.toX] = m.piece;
         this.game.board[m.fromY][m.fromX] = null;
 
@@ -1853,10 +1903,12 @@ class JanggiAI {
         }
       }
 
-      let flag = 'EXACT';
-      if (minEval <= originalAlpha) flag = 'UPPERBOUND';
-      else if (minEval >= beta) flag = 'LOWERBOUND';
-      this.tt.set(hash, { depth, score: minEval, flag, bestMove: bestMoveAtThisNode });
+      if (!this.isSearchTimeout) {
+        let flag = 'EXACT';
+        if (minEval <= originalAlpha) flag = 'UPPERBOUND';
+        else if (minEval >= beta) flag = 'LOWERBOUND';
+        this.tt.set(hash, { depth, score: minEval, flag, bestMove: bestMoveAtThisNode });
+      }
 
       return minEval;
     }
@@ -2827,10 +2879,11 @@ btnHint.addEventListener('click', () => {
   guideText.classList.add('highlight');
   sound.speak('잠시 생각 중입니다.');
 
-  // UI 스피너가 즉시 화면에 렌더링되도록 비동기 지연 실행
+  // UI 스피너가 즉시 화면에 렌더링되도록 비동기 지연 실행 (60ms)
   setTimeout(() => {
     try {
-      const best = ai.getBestMove(game.currentTurn, 'hard');
+      // 훈수는 깊이 3수 고속 탐색(hint) 및 800ms 타임아웃 가드를 적용하여 0.1~0.3초 내외로 즉각 안내
+      const best = ai.getBestMove(game.currentTurn, 'hint', 800);
       if (best) {
         hintArrow = best;
         renderBoard(); // 보드 렌더링 (화살표 및 오버레이 표시)
@@ -2866,7 +2919,7 @@ btnHint.addEventListener('click', () => {
       btnHint.disabled = false;
       btnHint.innerHTML = originalHtml;
     }
-  }, 400);
+  }, 60);
 });
 
 // [한 수 쉼] 버튼
