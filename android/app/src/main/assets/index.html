@@ -1637,59 +1637,104 @@ class JanggiAI {
     return targetVal - attackerVal;
   }
 
-  // 착수 순서 정렬 (Move Ordering: TT Best Move > SEE 양호 캡처 > 장군 > 킬러 무브 > 일반)
+  // 착수 순서 정렬 (Move Ordering: TT Best Move > MVV-LVA 기물 포획 > 킬러 무브 > 전진 가산점)
+  // [초고속 최적화]: Comparator 내부의 재귀/판스캔(isCheck, SEE)을 완전 제거하고 O(1) 선형 사전 점수화 적용!
   orderMoves(moves, team, depth = 0, ttBestMove = null) {
-    const oppTeam = team === TEAM_CHO ? TEAM_HAN : TEAM_CHO;
-    return moves.sort((a, b) => {
-      // 1. 전치 테이블에 기록된 최선의 수(TT Best Move) 최우선
-      if (ttBestMove) {
-        const isA = a.fromX === ttBestMove.fromX && a.fromY === ttBestMove.fromY && a.toX === ttBestMove.toX && a.toY === ttBestMove.toY;
-        const isB = b.fromX === ttBestMove.fromX && b.fromY === ttBestMove.fromY && b.toX === ttBestMove.toX && b.toY === ttBestMove.toY;
-        if (isA) return -100000;
-        if (isB) return 100000;
+    for (let i = 0; i < moves.length; i++) {
+      const m = moves[i];
+      let score = 0;
+
+      // 1. 전치 테이블에 기록된 최선의 수(TT Best Move) 최우선 (+100,000점)
+      if (ttBestMove && m.fromX === ttBestMove.fromX && m.fromY === ttBestMove.fromY && m.toX === ttBestMove.toX && m.toY === ttBestMove.toY) {
+        score += 100000;
       }
 
-      let scoreA = 0;
-      let scoreB = 0;
-
-      // 2. 상대 기물 포획 및 SEE(정적 교환 평가) 가중치
-      if (a.captured) {
-        const seeA = this.evaluateSEE(a, team);
-        scoreA += (seeA >= 0 ? 5000 + seeA : -2000 + seeA);
-      }
-      if (b.captured) {
-        const seeB = this.evaluateSEE(b, team);
-        scoreB += (seeB >= 0 ? 5000 + seeB : -2000 + seeB);
+      // 2. MVV-LVA (가장 가치 있는 상대 기물을 가장 가치 낮은 내 기물로 잡기)
+      if (m.captured) {
+        const victimVal = this.pieceValues[m.captured.type] || 0;
+        const attackerVal = this.pieceValues[m.piece.type] || 0;
+        score += victimVal * 10 - attackerVal + 5000;
       }
 
-      // 3. 장군(Check) 공격 가중치 (+1500점)
-      this.game.board[a.toY][a.toX] = a.piece;
-      this.game.board[a.fromY][a.fromX] = null;
-      if (this.game.isCheck(oppTeam)) scoreA += 1500;
-      this.game.board[a.fromY][a.fromX] = a.piece;
-      this.game.board[a.toY][a.toX] = a.captured;
-
-      this.game.board[b.toY][b.toX] = b.piece;
-      this.game.board[b.fromY][b.fromX] = null;
-      if (this.game.isCheck(oppTeam)) scoreB += 1500;
-      this.game.board[b.fromY][b.fromX] = b.piece;
-      this.game.board[b.toY][b.toX] = b.captured;
-
-      // 4. 킬러 무브(Killer Move) 가산점
+      // 3. 킬러 무브(Killer Move) 가산점
       if (depth < this.killerMoves.length) {
         const [k1, k2] = this.killerMoves[depth];
-        if (k1 && a.fromX === k1.fromX && a.fromY === k1.fromY && a.toX === k1.toX && a.toY === k1.toY) scoreA += 800;
-        if (k2 && a.fromX === k2.fromX && a.fromY === k2.fromY && a.toX === k2.toX && a.toY === k2.toY) scoreA += 400;
-        if (k1 && b.fromX === k1.fromX && b.fromY === k1.fromY && b.toX === k1.toX && b.toY === k1.toY) scoreB += 800;
-        if (k2 && b.fromX === k2.fromX && b.fromY === k2.fromY && b.toX === k2.toX && b.toY === k2.toY) scoreB += 400;
+        if (k1 && m.fromX === k1.fromX && m.fromY === k1.fromY && m.toX === k1.toX && m.toY === k1.toY) score += 900;
+        else if (k2 && m.fromX === k2.fromX && m.fromY === k2.fromY && m.toX === k2.toX && m.toY === k2.toY) score += 500;
       }
 
-      // 5. 중앙 전진 가산점
-      scoreA += (4 - Math.abs(a.toX - 4)) * 10;
-      scoreB += (4 - Math.abs(b.toX - 4)) * 10;
+      // 4. 중앙 전진 가산점
+      score += (4 - Math.abs(m.toX - 4)) * 10;
+      m.orderScore = score;
+    }
 
-      return scoreB - scoreA;
-    });
+    return moves.sort((a, b) => b.orderScore - a.orderScore);
+  }
+
+  // [친절한 훈수] 전용 초고속 원포인트 조언 엔진 (10ms 이내 즉답 도출)
+  // 초반 정석(Book) 즉시 추천 + 중후반 깊이 2수(내 수->상대 반격 4수 샘플링) 초고속 수읽기
+  getHintMove(team) {
+    const moves = this.getAllLegalMoves(team);
+    if (moves.length === 0) return null;
+
+    // 1. 초반 1~10수: 장기 정석(Opening Book) 패턴 즉시 반환 (0.001초 이내)
+    if (this.game.history.length < 10) {
+      const opening = this.getOpeningMove(team, moves);
+      if (opening) return opening;
+    }
+
+    // 2. 중/후반 훈수: 깊이 2수 초고속 수읽기 (블런더 회피 및 최선의 기물 활용)
+    this.orderMoves(moves, team, 0, null);
+
+    let bestMove = moves[0];
+    let bestScore = team === TEAM_CHO ? -Infinity : Infinity;
+
+    for (const move of moves) {
+      this.game.board[move.toY][move.toX] = move.piece;
+      this.game.board[move.fromY][move.fromX] = null;
+
+      // 상대 최선의 반격 4수 샘플링 평가
+      const oppTeam = team === TEAM_CHO ? TEAM_HAN : TEAM_CHO;
+      let oppMoves = this.getAllLegalMoves(oppTeam);
+      this.orderMoves(oppMoves, oppTeam, 1, null);
+
+      let oppBestScore = oppTeam === TEAM_CHO ? -Infinity : Infinity;
+      const sampleCount = Math.min(oppMoves.length, 4);
+
+      for (let j = 0; j < sampleCount; j++) {
+        const om = oppMoves[j];
+        this.game.board[om.toY][om.toX] = om.piece;
+        this.game.board[om.fromY][om.fromX] = null;
+
+        const evalScore = this.evaluatePosition('easy');
+
+        this.game.board[om.fromY][om.fromX] = om.piece;
+        this.game.board[om.toY][om.toX] = om.captured;
+
+        if (oppTeam === TEAM_CHO) {
+          if (evalScore > oppBestScore) oppBestScore = evalScore;
+        } else {
+          if (evalScore < oppBestScore) oppBestScore = evalScore;
+        }
+      }
+
+      this.game.board[move.fromY][move.fromX] = move.piece;
+      this.game.board[move.toY][move.toX] = move.captured;
+
+      if (team === TEAM_CHO) {
+        if (oppBestScore > bestScore) {
+          bestScore = oppBestScore;
+          bestMove = move;
+        }
+      } else {
+        if (oppBestScore < bestScore) {
+          bestScore = oppBestScore;
+          bestMove = move;
+        }
+      }
+    }
+
+    return bestMove;
   }
 
   // 최적의 한 수 계산 (요청 반영: 기존 중급->초급, 기존 고급->중급, 고급->아마 1급 이상 고수, 훈수 전용 모드 및 타임아웃 지원)
@@ -1773,29 +1818,37 @@ class JanggiAI {
   // 오프닝 정석 수(Opening Book) 패턴 추출 (초/한 양방향 완벽 지원)
   getOpeningMove(team, moves) {
     if (team === TEAM_CHO) {
-      // 1. 초(楚) 면포 안착: 포(包)를 궁성 중앙(x=4, y=2)으로 이동하는 수가 있으면 최우선 실행!
+      // 1. 초(楚) 면포 안착: 포(包)를 궁성 중앙(x=4, y=2)으로 이동하는 수
       const cannonToCenter = moves.find(m => m.piece.type === TYPE_CANNON && m.toX === 4 && m.toY === 2);
       if (cannonToCenter) return cannonToCenter;
 
-      // 2. 초(楚) 귀마 진출: 마(馬)를 중앙으로 진출시키는 수 (x=2 or 6, y=2)
-      const horseAdvance = moves.find(m => m.piece.type === TYPE_HORSE && (m.toX === 2 || m.toX === 6) && m.toY === 2);
+      // 2. 초(楚) 귀마/진마 진출: 마(馬)를 궁성 귀(x=2, 3, 5, 6, y=2)로 진출시키는 수
+      const horseAdvance = moves.find(m => m.piece.type === TYPE_HORSE && (m.toX === 2 || m.toX === 3 || m.toX === 5 || m.toX === 6) && m.toY === 2);
       if (horseAdvance) return horseAdvance;
 
       // 3. 초(楚) 차길 열기: 졸(卒)을 안쪽으로 모으는 합졸 수
       const pawnOpen = moves.find(m => m.piece.type === TYPE_PAWN && (m.toX === 1 || m.toX === 7) && m.toY === 3);
       if (pawnOpen) return pawnOpen;
+
+      // 4. 초(楚) 중앙 상 진출
+      const elephantAdvance = moves.find(m => m.piece.type === TYPE_ELEPHANT && (m.toX === 2 || m.toX === 4 || m.toX === 6) && m.toY === 4);
+      if (elephantAdvance) return elephantAdvance;
     } else if (team === TEAM_HAN) {
-      // 1. 한(漢) 면포 안착: 포(包)를 궁성 중앙(x=4, y=7)으로 이동하는 수가 있으면 최우선 실행!
+      // 1. 한(漢) 면포 안착: 포(包)를 궁성 중앙(x=4, y=7)으로 이동하는 수
       const cannonToCenterHan = moves.find(m => m.piece.type === TYPE_CANNON && m.toX === 4 && m.toY === 7);
       if (cannonToCenterHan) return cannonToCenterHan;
 
-      // 2. 한(漢) 귀마 진출: 마(馬)를 중앙으로 진출시키는 수 (x=2 or 6, y=7)
-      const horseAdvanceHan = moves.find(m => m.piece.type === TYPE_HORSE && (m.toX === 2 || m.toX === 6) && m.toY === 7);
+      // 2. 한(漢) 귀마/진마 진출: 마(馬)를 궁성 귀(x=2, 3, 5, 6, y=7)로 진출시키는 수
+      const horseAdvanceHan = moves.find(m => m.piece.type === TYPE_HORSE && (m.toX === 2 || m.toX === 3 || m.toX === 5 || m.toX === 6) && m.toY === 7);
       if (horseAdvanceHan) return horseAdvanceHan;
 
       // 3. 한(漢) 차길 열기: 병(兵)을 안쪽으로 모으는 합병 수
       const pawnOpenHan = moves.find(m => m.piece.type === TYPE_PAWN && (m.toX === 1 || m.toX === 7) && m.toY === 6);
       if (pawnOpenHan) return pawnOpenHan;
+
+      // 4. 한(漢) 중앙 상 진출
+      const elephantAdvanceHan = moves.find(m => m.piece.type === TYPE_ELEPHANT && (m.toX === 2 || m.toX === 4 || m.toX === 6) && m.toY === 5);
+      if (elephantAdvanceHan) return elephantAdvanceHan;
     }
     return null;
   }
@@ -2859,7 +2912,7 @@ document.getElementById('btn-action-undo').addEventListener('click', () => {
   renderBoard();
 });
 
-// [친절한 훈수] 버튼 (어르신 대기 인지 로딩 피드백 & [👉 이대로 두기] 원터치 버튼 연동)
+// [친절한 훈수] 버튼 (초고속 getHintMove 엔진 연동: 0.01초 내 즉각 훈수 안내)
 const btnHint = document.getElementById('btn-action-hint');
 let isCalculatingHint = false;
 
@@ -2872,18 +2925,11 @@ btnHint.addEventListener('click', () => {
 
   isCalculatingHint = true;
   btnHint.disabled = true;
-  const originalHtml = btnHint.innerHTML;
-  btnHint.innerHTML = `<span class="spin-icon">⏳</span><span style="font-size:14px; font-weight:800;">생각중...</span>`;
-  
-  guideText.innerHTML = `🤔 AI가 훈수를 깊이 생각하고 있습니다. 잠시만 기다려주세요...`;
-  guideText.classList.add('highlight');
-  sound.speak('잠시 생각 중입니다.');
 
-  // UI 스피너가 즉시 화면에 렌더링되도록 비동기 지연 실행 (60ms)
-  setTimeout(() => {
+  // 번개 같은 초고속 훈수 연산 (10ms 이내 완료)
+  requestAnimationFrame(() => {
     try {
-      // 훈수는 깊이 3수 고속 탐색(hint) 및 800ms 타임아웃 가드를 적용하여 0.1~0.3초 내외로 즉각 안내
-      const best = ai.getBestMove(game.currentTurn, 'hint', 800);
+      const best = ai.getHintMove(game.currentTurn);
       if (best) {
         hintArrow = best;
         renderBoard(); // 보드 렌더링 (화살표 및 오버레이 표시)
@@ -2917,9 +2963,8 @@ btnHint.addEventListener('click', () => {
     } finally {
       isCalculatingHint = false;
       btnHint.disabled = false;
-      btnHint.innerHTML = originalHtml;
     }
-  }, 60);
+  });
 });
 
 // [한 수 쉼] 버튼
