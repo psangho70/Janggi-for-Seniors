@@ -1,4 +1,4 @@
-#
+﻿#
 # sync_web_assets.ps1
 # 청춘 장기 (Janggi for Seniors) - 최신 웹 코어 자원을 iOS 번들(www/)로 동기화
 #
@@ -16,7 +16,9 @@ if (-not (Test-Path $targetDir)) {
 $filesToCopy = @(
     "index.html",
     "icon.svg",
+    "icon_192.png",
     "icon_512.png",
+    "apple-touch-icon.png",
     "manifest.json",
     "sw.js"
 )

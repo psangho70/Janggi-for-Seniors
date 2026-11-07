@@ -4,10 +4,27 @@
   "description": "연세 많으신 어르신을 위한 돋보기 없는 큰글씨, 광고 없는 편안한 효도 장기 앱. 무제한 한 수 무르기와 친절한 훈수 제공.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#FDFBF7",
+  "background_color": "#F7EBD3",
   "theme_color": "#8C5824",
   "orientation": "portrait",
   "icons": [
+    {
+      "src": "icon_192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon_512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
     {
       "src": "icon.svg",
       "sizes": "any",

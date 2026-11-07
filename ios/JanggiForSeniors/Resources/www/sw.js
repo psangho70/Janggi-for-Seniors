@@ -1,10 +1,13 @@
-// 청춘 장기 오프라인 서비스 워커 (Service Worker)
-const CACHE_NAME = 'senior-janggi-v1.0.0';
+// 청춘 장기 오프라인 서비스 워커 (Service Worker) - v1.1.0
+const CACHE_NAME = 'senior-janggi-v1.1.0';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
-  './icon.svg'
+  './icon.svg',
+  './apple-touch-icon.png',
+  './icon_192.png',
+  './icon_512.png'
 ];
 
 self.addEventListener('install', (event) => {
