@@ -2298,6 +2298,70 @@ class JanggiAI {
   }
 }
 
+// ============================================================
+// [크로스플랫폼 통합 네이티브 브릿지 (Android / iOS / Web)]
+// ============================================================
+const NativeBridge = {
+  isIOS: function() {
+    return !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.iosBridge);
+  },
+  isAndroid: function() {
+    return !!(window.AndroidBridge && typeof window.AndroidBridge.speak === 'function');
+  },
+  // 한국어 음성 안내
+  speak: function(text) {
+    if (!text) return;
+    // 1. iOS 네이티브 브릿지 (AVSpeechSynthesizer)
+    if (this.isIOS()) {
+      try {
+        window.webkit.messageHandlers.iosBridge.postMessage({ action: 'speak', text: String(text) });
+        return;
+      } catch (e) {
+        console.warn('iOS TTS Bridge 오류:', e);
+      }
+    }
+    // 2. 안드로이드 네이티브 브릿지
+    if (this.isAndroid()) {
+      try {
+        window.AndroidBridge.speak(String(text));
+        return;
+      } catch (e) {
+        console.warn('Android TTS Bridge 오류:', e);
+      }
+    }
+    // 3. 브라우저 표준 Web Speech API
+    if (window.speechSynthesis) {
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(String(text));
+        utterance.lang = 'ko-KR';
+        utterance.rate = 0.95; // 어르신을 위한 차분하고 명료한 발음
+        utterance.pitch = 1.0;
+        window.speechSynthesis.speak(utterance);
+      } catch (e) {
+        console.warn('Web Speech API 오류:', e);
+      }
+    }
+  },
+  // 묵직한 Taptic / 진동 촉각 피드백
+  haptic: function(style = 'medium') {
+    // 1. iOS 네이티브 Taptic Engine
+    if (this.isIOS()) {
+      try {
+        window.webkit.messageHandlers.iosBridge.postMessage({ action: 'haptic', style: style });
+        return;
+      } catch (e) {}
+    }
+    // 2. 안드로이드 및 모바일 웹 진동 폴백
+    if (navigator.vibrate) {
+      try {
+        const ms = (style === 'heavy' || style === 'rigid') ? 50 : 35;
+        navigator.vibrate(ms);
+      } catch (e) {}
+    }
+  }
+};
+
 // --- 오디오 & 음성 시스템 ---
 class SoundSystem {
   constructor() {
@@ -2308,7 +2372,12 @@ class SoundSystem {
   initAudio() {
     if (!this.audioCtx) {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (AudioContext) this.audioCtx = new AudioContext();
+      if (AudioContext) {
+        this.audioCtx = new AudioContext();
+      }
+    }
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      this.audioCtx.resume().catch(() => {});
     }
   }
 
@@ -2319,6 +2388,9 @@ class SoundSystem {
     if (!this.audioCtx) return;
 
     try {
+      if (this.audioCtx.state === 'suspended') {
+        this.audioCtx.resume().catch(() => {});
+      }
       const t = this.audioCtx.currentTime;
       const osc = this.audioCtx.createOscillator();
       const gain = this.audioCtx.createGain();
@@ -2339,37 +2411,19 @@ class SoundSystem {
       console.log('Audio play error:', e);
     }
 
-    // 모바일 진동 (햅틱 40ms)
-    if (navigator.vibrate) {
-      try { navigator.vibrate(35); } catch (e) {}
-    }
+    // 크로스플랫폼 햅틱 피드백 (iOS Taptic & Android Vibrate)
+    NativeBridge.haptic('medium');
+  }
+
+  // 햅틱 직접 호출
+  haptic(style = 'medium') {
+    NativeBridge.haptic(style);
   }
 
   // 한국어 음성 안내 (TTS)
   speak(text) {
     if (!this.enabled) return;
-    // 1. 네이티브 안드로이드 TTS 브릿지 우선 사용
-    if (window.AndroidBridge && typeof window.AndroidBridge.speak === 'function') {
-      try {
-        window.AndroidBridge.speak(text);
-        return;
-      } catch (e) {
-        console.log('AndroidBridge speak error:', e);
-      }
-    }
-    // 2. 브라우저 Web Speech API 사용
-    if (window.speechSynthesis) {
-      try {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'ko-KR';
-        utterance.rate = 0.95; // 어르신을 위해 약간 또렷하고 차분한 속도
-        utterance.pitch = 1.0;
-        window.speechSynthesis.speak(utterance);
-      } catch (e) {
-        console.log('TTS speak error:', e);
-      }
-    }
+    NativeBridge.speak(text);
   }
 }
 
@@ -2954,6 +3008,15 @@ function updateStatusUI() {
     }
   }
 }
+
+// iOS WebKit 및 모바일 브라우저 오디오 언락 (첫 제스처 시 활성화)
+const unlockAudioOnGesture = () => {
+  if (sound) sound.initAudio();
+  window.removeEventListener('touchstart', unlockAudioOnGesture);
+  window.removeEventListener('click', unlockAudioOnGesture);
+};
+window.addEventListener('touchstart', unlockAudioOnGesture, { passive: true });
+window.addEventListener('click', unlockAudioOnGesture, { passive: true });
 
 // --- 보드 클릭/터치 이벤트 처리 ---
 canvas.addEventListener('click', (e) => {

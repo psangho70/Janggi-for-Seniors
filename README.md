@@ -96,13 +96,13 @@
   - **Vanilla CSS3**: 시니어 친화 고대비 디자인, Flexbox/Grid 기반 완벽 반응형, Safe Area Inset 처리
   - **Vanilla JavaScript (ES6+)**: 대한장기협회 공식 룰 엔진, Minimax & Alpha-Beta AI, Zobrist Hashing 전치 테이블, SEE 정적 교환 평가
   - **Web Audio API**: 원목 착수음 및 시스템 사운드 합성
-- **안드로이드 네이티브 (Native Bridge)**:
-  - **Kotlin (Android SDK 36)**: 최신 안드로이드 14~15 완벽 대응 및 하위 호환
-  - **WebView Client & JavascriptBridge**: 웹 엔진과 네이티브 하드웨어 기능 완벽 연동
-  - **WindowInsetsCompat**: 스마트폰 상단 상태바 및 하단 소프트키/제스처바 영역 침범 방지
-  - **TextToSpeech (TTS)**: 안드로이드 네이티브 고음질 한국어 음성 낭독 (어르신 배려 0.9배속)
-  - **WindowManager KeepScreenOn**: 어르신 장고(長考) 중 화면 꺼짐 자동 방지
-  - **Double-back-to-exit**: 뒤로가기 실수 터치 시 앱 즉시 종료 방지 토스트 안내
+- **iOS 네이티브 (Native Bridge)**:
+  - **Swift (iOS 16+ / Xcode 15+)**: iPhone 및 iPad 유니버설 최신 iOS 완벽 대응
+  - **WKWebView & WKScriptMessageHandler**: 웹 엔진과 네이티브 하드웨어 기능 완벽 연동
+  - **AVSpeechSynthesizer**: iOS 네이티브 고음질 한국어 음성 낭독 (어르신 배려 0.45배속)
+  - **UIImpactFeedbackGenerator (Taptic Engine)**: 원목 기물 착수 및 장군 시 묵직한 손맛 햅틱
+  - **AVAudioSession (.playback)**: 아이폰 하드웨어 무음 스위치 상태에서도 착수음/음성 정상 출력
+  - **UIApplication isIdleTimerDisabled**: 어르신 장고(長考) 중 화면 꺼짐 상시 방지
 
 ---
 
@@ -121,18 +121,34 @@ Janggi for Seniors/
 │   │   │   └── AndroidManifest.xml
 │   │   └── build.gradle.kts
 │   └── build.gradle.kts
+├── ios/                                 # 🆕 iOS 네이티브 프로젝트 (Xcode / Swift)
+│   ├── JanggiForSeniors.xcodeproj/      # Xcode 프로젝트 설정 파일
+│   ├── JanggiForSeniors/
+│   │   ├── App/
+│   │   │   └── JanggiForSeniorsApp.swift # 앱 라이프사이클, 화면꺼짐방지, 오디오세션
+│   │   ├── Views/
+│   │   │   ├── ContentView.swift        # Safe Area 일체형 루트 뷰
+│   │   │   └── JanggiWebView.swift      # WKWebView Representable 및 뷰포트 통제
+│   │   ├── Bridge/
+│   │   │   └── NativeBridgeHandler.swift # TTS(AVSpeech) 및 Taptic Engine 햅틱 브릿지
+│   │   ├── Resources/
+│   │   │   ├── Assets.xcassets/         # 1024x1024 AppIcon 및 색상 팔레트
+│   │   │   └── www/                     # 번들링 웹 에셋 (index.html, icon.svg 등)
+│   │   └── Info.plist                   # iOS 권한 및 회전 설정
+│   └── sync_web_assets.ps1              # 웹 자원 자동 동기화 스크립트
 ├── docs/                                # 개발 기획서 및 작업 이력 통합 문서
+│   ├── 2026.11.07_210413_아이폰_장기앱_사용매뉴얼.pdf # 🆕 [A4 매뉴얼] 비전문가용 아이폰 설치·사용 가이드
+│   ├── 2026.11.07_210413_아이폰_장기앱_사용매뉴얼.md
+│   ├── 2026.11.07_204217_iOS_앱_개발_계획서.md        # iOS 네이티브 개발 상세 계획 및 결과서
 │   ├── 2026.10.21_202550_어르신_장기앱_개발계획서.md
-│   ├── 2026.10.23_210300_환경설정_난이도_항복_개선.md
-│   ├── 2026.10.24_144008_훈수_지연_원인_조치방안.md
-│   └── 2026.10.24_195208_훈수_벤치마킹_개선.md
+│   └── ...
 ├── icon.svg                             # 벡터 마스터 앱 아이콘
 ├── icon_512.png                         # 512x512 고해상도 앱 아이콘
 ├── icon_512_round.png                   # 원형 마스킹 앱 아이콘
-├── index.html                           # 웹앱 단일 통합 소스코드 (HTML+CSS+JS)
+├── index.html                           # 크로스플랫폼 통합 웹 소스코드 (HTML+CSS+JS)
 ├── manifest.json                        # PWA 매니페스트
 ├── sw.js                                # 오프라인 캐싱 서비스 워커
-├── 청춘장기_v1.0.1.apk                   # [최신] 배포용 안드로이드 단독 설치 파일 (13.6MB)
+├── 청춘장기_v1.0.1.apk                   # [안드로이드] 배포용 단독 설치 파일 (13.6MB)
 ├── 청춘장기_v1.0.0.apk                   # 배포용 안드로이드 단독 설치 파일 (13.6MB)
 └── README.md                            # 프로젝트 안내 문서
 ```
@@ -141,24 +157,53 @@ Janggi for Seniors/
 
 ## 📲 7. 설치 및 실행 방법
 
-### 1) 안드로이드 스마트폰에 직접 설치
+### 1) 🌐 온라인 웹 바로가기 (아이폰 · 안드로이드 · PC 공통)
+별도의 파일 설치 없이 스마트폰 브라우저에서 공식 배포 주소로 접속하시면 즉시 실행됩니다.
+- **공식 접속 주소**: **[`https://psangho70.github.io/Janggi-for-Seniors/`](https://psangho70.github.io/Janggi-for-Seniors/)**
+
+### 2) 🍎 아이폰(iPhone & iPad)에서 직접 설치
+아이폰 사용자는 상황에 따라 아래 3가지 방법 중 가장 편한 방법을 선택하실 수 있습니다:
+- **[방법 1] Safari 10초 홈 화면 추가 (가장 추천 / 컴퓨터 불필요)**:
+  1. 사파리(Safari)로 위 공식 배포 주소에 접속합니다.
+  2. 하단 중앙의 **공유 버튼 `[ ↑ ]`**을 누르고 **[ ➕ 홈 화면에 추가 ]**를 선택합니다.
+  3. 홈 화면에 아이콘이 생기며, 누르면 **일반 앱과 100% 동일하게 전체화면**으로 시원하게 실행되고 오프라인에서도 구동됩니다.
+- **[방법 2] Mac + 무료 Apple 계정으로 Xcode 직접 설치 (순수 네이티브 앱)**:
+  - Mac에서 `ios/JanggiForSeniors.xcodeproj`를 열고 내 무료 Apple ID를 선택한 뒤 `▶ (실행)`을 누르면 아이폰에 영구 소장용 앱으로 바로 설치됩니다.
+- **[방법 3] 윈도우 PC에서 Sideloadly 도구로 설치 (IPA 직접 주입)**:
+  - 윈도우 PC에서 Sideloadly 유틸리티를 통해 `청춘장기.ipa`를 아이폰으로 바로 주입·설치할 수 있습니다.
+- 📖 **상세 가이드**: [2026.11.07_210413_아이폰_장기앱_사용매뉴얼.pdf](docs/2026.11.07_210413_아이폰_장기앱_사용매뉴얼.pdf) 참조
+
+### 3) 🤖 안드로이드 스마트폰에 직접 설치
 - 프로젝트 루트의 **[`청춘장기_v1.0.1.apk`](청춘장기_v1.0.1.apk)** 파일(13.6MB)을 스마트폰으로 복사 후 터치하여 설치합니다.
-- 복잡한 회원가입이나 인터넷 연결 없이 설치 즉시 실행하여 대국을 시작하실 수 있습니다.
+- 복잡한 회원가입이나 권한 요구 없이 설치 즉시 오프라인으로 대국을 시작하실 수 있습니다.
 
-### 2) 웹 브라우저에서 실행
-- 별도의 웹 서버나 설치 없이 [`index.html`](index.html) 파일을 크롬(Chrome), 사파리(Safari), 엣지(Edge) 등의 모바일/PC 브라우저로 열면 즉시 플레이 가능합니다.
-
-### 3) 소스코드에서 안드로이드 APK 직접 빌드
-```bash
-cd android
-./gradlew assembleDebug
-# 빌드 산출물: app/build/outputs/apk/debug/app-debug.apk
-```
+### 4) 소스코드에서 직접 빌드
+- **안드로이드 APK 빌드**:
+  ```bash
+  cd android
+  ./gradlew assembleDebug
+  # 빌드 산출물: app/build/outputs/apk/debug/app-debug.apk
+  ```
+- **iOS 프로젝트 빌드**:
+  ```bash
+  cd ios
+  # Mac 터미널에서 xcodebuild 실행 또는 Xcode에서 JanggiForSeniors.xcodeproj 오픈
+  xcodebuild -project JanggiForSeniors.xcodeproj -scheme JanggiForSeniors -destination "generic/platform=iOS" build
+  ```
 
 ---
 
-## 🚀 8. 최신 릴리즈 노트 (v1.0.1)
+## 🚀 8. 최신 릴리즈 노트
 
+### 🌟 v1.1.0 (2026.11.07) - iOS 네이티브 지원 및 크로스플랫폼 통합
+- **[iOS 네이티브 프로젝트 신설]**: Apple 표준 Swift + WKWebView 기반 초경량(< 3MB) iOS 프로젝트(`ios/JanggiForSeniors`) 구축.
+- **[iOS 고음질 한국어 TTS 연동]**: `AVSpeechSynthesizer` 기반 0.45배속의 또렷한 시니어 특화 음성 안내 탑재.
+- **[Taptic Engine 손맛 구현]**: `UIImpactFeedbackGenerator`를 연동하여 기물 착수(.medium) 및 장군(.heavy) 시 묵직한 원목 타격 촉감 전달.
+- **[화면 꺼짐 방지 & 무음 모드 오디오]**: `isIdleTimerDisabled`로 장고 중 화면 꺼짐을 막고, `AVAudioSession(.playback)`으로 무음 스위치 상태에서도 착수음/음성 재생.
+- **[통합 NativeBridge 구축]**: 웹 코드가 iOS, Android, 일반 브라우저 환경을 자동 판별하여 단일 인터페이스로 동작.
+- **[비전문가용 아이폰 설치 매뉴얼 PDF]**: A4 2페이지 규격의 깔끔한 사용자 매뉴얼 및 GitHub Actions 자동 빌드 CI/CD 탑재.
+
+### 🌿 v1.0.1 (2026.10.26) - 훈수 벤치마킹 고도화 및 안정성 개선
 - **[훈수 전면 고도화]**: 타 장기·체스 앱 벤치마킹 기반 7대 전술 뱃지 & 해설 문구, 시인성 극대화 황금 맥박 링, 포획 시 루비 레드 타깃 조준선, 원터치 `[👉 이대로 두기]` 착수 기능 탑재.
 - **[초고속 훈수 엔진]**: 1-ply 초경량 평가 알고리즘 도입으로 훈수 응답 속도 **1ms 이내(0.001초)** 단축 및 모바일 발열/프리징 100% 해소.
 - **[시스템 글자 크기 독립 제어]**: 스마트폰 환경설정의 글자 크기를 최대로 키워도 앱 화면이 밀리거나 깨지지 않도록 WebView 독립 통제 적용.

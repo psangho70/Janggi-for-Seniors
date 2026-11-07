@@ -1,0 +1,18 @@
+{
+  "name": "청춘 장기 - 어르신을 위한 큰글씨 효도 장기",
+  "short_name": "청춘장기",
+  "description": "연세 많으신 어르신을 위한 돋보기 없는 큰글씨, 광고 없는 편안한 효도 장기 앱. 무제한 한 수 무르기와 친절한 훈수 제공.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FDFBF7",
+  "theme_color": "#8C5824",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
