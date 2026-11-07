@@ -815,7 +815,7 @@
     <div class="home-quick-bar">
       <button class="quick-btn" id="btn-toggle-font-home">
         <span style="font-size:20px;">🔤</span>
-        <span id="label-piece-type" style="font-size:13.5px; font-weight:800; white-space:nowrap;">한글 기물</span>
+        <span id="label-piece-type" style="font-size:13.5px; font-weight:800; white-space:nowrap;">한자 기물</span>
       </button>
       <button class="quick-btn" id="btn-open-level-home">
         <span style="font-size:20px;">🎯</span>
@@ -849,7 +849,7 @@
         </div>
       </div>
       <button class="header-btn" id="btn-game-toggle-font">
-        <span id="btn-game-font-label">한글</span>
+        <span id="btn-game-font-label">한자</span>
       </button>
     </header>
 
@@ -982,16 +982,16 @@
       <div class="setting-group">
         <label class="setting-label">기물 글씨 표기</label>
         <div class="setting-btn-group">
-          <button class="setting-opt-btn active" id="opt-font-ko">한글 (궁,차,포...)</button>
-          <button class="setting-opt-btn" id="opt-font-han">한자 (楚/漢,車,包...)</button>
+          <button class="setting-opt-btn" id="opt-font-ko">한글 (궁,차,포...)</button>
+          <button class="setting-opt-btn active" id="opt-font-han">한자 (楚/漢,車,包...)</button>
         </div>
       </div>
 
       <div class="setting-group">
         <label class="setting-label">착수 조작 방식</label>
         <div class="setting-btn-group">
-          <button class="setting-opt-btn active" id="opt-move-confirm">2단계 확인 후 착수</button>
-          <button class="setting-opt-btn" id="opt-move-direct">원터치 바로 착수</button>
+          <button class="setting-opt-btn" id="opt-move-confirm">2단계 확인 후 착수</button>
+          <button class="setting-opt-btn active" id="opt-move-direct">원터치 바로 착수</button>
         </div>
       </div>
 
@@ -1006,17 +1006,17 @@
       <div class="setting-group">
         <label class="setting-label">AI 기력 (난이도)</label>
         <div class="setting-btn-group">
-          <button class="setting-opt-btn" id="opt-ai-easy">초급</button>
-          <button class="setting-opt-btn active" id="opt-ai-mid">중급</button>
+          <button class="setting-opt-btn active" id="opt-ai-easy">초급</button>
+          <button class="setting-opt-btn" id="opt-ai-mid">중급</button>
           <button class="setting-opt-btn" id="opt-ai-hard">고급</button>
         </div>
         <!-- 선택된 난이도 수준 안내 카드 -->
         <div id="ai-level-desc-box" style="margin-top:8px; background:#f7efe5; border:2px solid #b58863; border-radius:10px; padding:9px 12px; text-align:left; box-shadow:inset 0 1px 3px rgba(0,0,0,0.05);">
           <div style="font-weight:900; font-size:14.5px; color:#5c3a21; margin-bottom:3px; display:flex; align-items:center; gap:6px;">
-            <span>💡</span> <span id="ai-desc-title">중급 수준 안내</span>
+            <span>💡</span> <span id="ai-desc-title">초급 수준 안내</span>
           </div>
           <div id="ai-desc-detail" style="font-size:13px; color:#4a2c11; line-height:1.4; font-weight:600;">
-            동네 경로당이나 기원의 장기 고수 수준입니다! 날카로운 수읽기와 탄탄한 궁성 수비로 팽팽한 진검승부를 펼칩니다.
+            기본 포진과 알뜰한 행마로 균형감 있게 겨루는 단계입니다. 기본 장기 규칙과 수비를 지키며 흥미진진한 대국을 즐기실 수 있습니다.
           </div>
         </div>
       </div>
@@ -2445,8 +2445,8 @@ const ai = new JanggiAI(game);
 const sound = new SoundSystem();
 
 // 사용자 설정 상태
-let fontMode = 'ko'; // 'ko' (한글) or 'han' (한자)
-let moveConfirmMode = true; // 2단계 확인 착수 여부
+let fontMode = 'han'; // 'ko' (한글) or 'han' (한자) - 이미지 기본값: 한자
+let moveConfirmMode = false; // 2단계 확인 착수 여부 - 이미지 기본값: 원터치 바로 착수
 let selectedPiecePos = null;
 let activePossibleMoves = [];
 let currentPiecePinInfo = null; // 핀(장군 노출 수비 부동) 상태 정보
@@ -3406,12 +3406,12 @@ document.getElementById('btn-confirm-resign').addEventListener('click', () => {
 // ============================================================
 // 사용자 환경설정 영구 저장 및 불러오기 (localStorage)
 // ============================================================
-const SETTINGS_KEY = 'senior_janggi_user_settings_v1';
+const SETTINGS_KEY = 'senior_janggi_user_settings_v2';
 const DEFAULT_SETTINGS = {
-  fontMode: 'ko',
-  moveConfirmMode: true,
-  soundEnabled: true,
-  aiLevel: 'mid' // 기본 중급
+  fontMode: 'han', // 한자 (楚/漢,車,包...)
+  moveConfirmMode: false, // 원터치 바로 착수
+  soundEnabled: true, // 친절한 우리말 음성 해설: 소리 켬
+  aiLevel: 'easy' // AI 기력 (난이도): 초급
 };
 
 function loadSettings() {

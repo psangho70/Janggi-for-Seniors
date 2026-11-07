@@ -1,0 +1,35 @@
+name: Build iOS App (Janggi for Seniors)
+
+on:
+  push:
+    paths:
+      - 'ios/**'
+      - 'index.html'
+      - '.github/workflows/ios-build.yml'
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    name: Build & Verify iOS Project
+    runs-on: macos-14
+
+    steps:
+      - name: 저장소 체크아웃 (Checkout Repository)
+        uses: actions/checkout@v4
+
+      - name: Xcode 버전 선택 (Select Xcode 15)
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: Xcode 프로젝트 빌드 및 검증 (Simulator Build)
+        run: |
+          xcodebuild clean build \
+            -project "ios/JanggiForSeniors.xcodeproj" \
+            -scheme "JanggiForSeniors" \
+            -destination "generic/platform=iOS Simulator" \
+            -configuration Release \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: 빌드 완료 알림
+        run: echo "🎉 청춘 장기 iOS 빌드 및 컴파일 검증이 성공적으로 완료되었습니다!"

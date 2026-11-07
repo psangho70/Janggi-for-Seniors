@@ -1,4 +1,4 @@
-﻿#
+#
 # sync_web_assets.ps1
 # 청춘 장기 (Janggi for Seniors) - 최신 웹 코어 자원을 iOS 번들(www/)로 동기화
 #
