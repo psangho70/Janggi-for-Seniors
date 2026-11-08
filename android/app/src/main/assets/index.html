@@ -828,7 +828,7 @@
       </button>
     </div>
     <div style="text-align:center; font-size:12px; color:#8C6239; margin-top:12px; font-weight:700; letter-spacing:0.5px;">
-      청춘 장기 v1.0.1 (초고속 훈수 탑재)
+      청춘 장기 v1.0.3 (유단자급 심층 수읽기 AI 탑재)
     </div>
   </div>
 
@@ -842,7 +842,7 @@
         <span>◀</span> 나가기
       </button>
       <div class="header-title-box">
-        <div class="header-mode-title" id="header-mode-text">AI 대국 (초급: 10급~6급)</div>
+        <div class="header-mode-title" id="header-mode-text">AI 대국 (초급)</div>
         <div class="header-turn-badge" id="header-turn-badge">
           <span id="header-turn-icon">🔴</span>
           <span id="header-turn-text">한(어르신) 차례</span>
@@ -1025,7 +1025,7 @@
         설정 완료
       </button>
       <div style="text-align:center; font-size:11.5px; color:#8C6239; margin-top:8px; font-weight:600;">
-        청춘 장기 v1.0.1 (초고속 훈수 엔진 탑재)
+        청춘 장기 v1.0.3 (유단자급 심층 수읽기 AI 탑재)
       </div>
     </div>
   </div>
@@ -1594,43 +1594,43 @@ class JanggiGame {
 class JanggiAI {
   constructor(game) {
     this.game = game;
-    // 기물 기본 가치 (밀리점수 체계)
+    // 기물 기본 가치 (대한장기협회 공식 덤/기물 점수 100배 스케일링)
     this.pieceValues = {
-      [TYPE_KING]: 20000,
+      [TYPE_KING]: 30000,
       [TYPE_CAR]: 1300,
       [TYPE_CANNON]: 700,
       [TYPE_HORSE]: 500,
       [TYPE_ELEPHANT]: 300,
-      [TYPE_ADVISOR]: 320,
+      [TYPE_ADVISOR]: 300,
       [TYPE_PAWN]: 200
     };
 
-    // 졸/병 위치 가중치 (전진 및 중앙 장악 보너스)
+    // 졸/병 위치 가중치 (전진 및 중앙 장악 보너스: 기물 가치 대비 5~35점 정밀 밸런스)
     this.pawnPST = [
       [ 0,  0,  0,  0,  0,  0,  0,  0,  0],
-      [15, 25, 35, 45, 55, 45, 35, 25, 15],
-      [25, 35, 50, 70, 80, 70, 50, 35, 25],
-      [35, 45, 65, 90,100, 90, 65, 45, 35],
-      [45, 55, 75,105,120,105, 75, 55, 45],
-      [55, 65, 85,115,130,115, 85, 65, 55],
-      [65, 75, 95,125,140,125, 95, 75, 65],
-      [75, 85,105,135,150,135,105, 85, 75],
-      [85, 95,115,145,160,145,115, 95, 85],
-      [95,105,125,155,170,155,125,105, 95]
+      [ 2,  4,  6,  8, 10,  8,  6,  4,  2],
+      [ 4,  6,  8, 12, 15, 12,  8,  6,  4],
+      [ 6,  8, 12, 18, 20, 18, 12,  8,  6],
+      [ 8, 10, 15, 22, 25, 22, 15, 10,  8],
+      [10, 12, 18, 25, 28, 25, 18, 12, 10],
+      [12, 14, 20, 28, 32, 28, 20, 14, 12],
+      [14, 16, 22, 30, 35, 30, 22, 16, 14],
+      [16, 18, 24, 32, 35, 32, 24, 18, 16],
+      [18, 20, 26, 32, 35, 32, 26, 20, 18]
     ];
 
-    // 마(馬) 위치 가중치 (중앙 기동력)
+    // 마(馬) 위치 가중치 (중앙 기동력: 모서리 멍텅구리 마 감점, 중앙 요충지 가산점)
     this.horsePST = [
-      [-20,-10,  0,  5,  5,  5,  0,-10,-20],
-      [-10, 10, 20, 25, 25, 25, 20, 10,-10],
-      [  0, 20, 35, 45, 50, 45, 35, 20,  0],
-      [  5, 25, 45, 60, 65, 60, 45, 25,  5],
-      [  5, 30, 50, 70, 75, 70, 50, 30,  5],
-      [  5, 30, 50, 70, 75, 70, 50, 30,  5],
-      [  5, 25, 45, 60, 65, 60, 45, 25,  5],
-      [  0, 20, 35, 45, 50, 45, 35, 20,  0],
-      [-10, 10, 20, 25, 25, 25, 20, 10,-10],
-      [-20,-10,  0,  5,  5,  5,  0,-10,-20]
+      [-15, -8,  0,  5,  5,  5,  0, -8,-15],
+      [ -8,  5, 12, 15, 15, 15, 12,  5, -8],
+      [  0, 10, 20, 25, 30, 25, 20, 10,  0],
+      [  5, 15, 25, 35, 40, 35, 25, 15,  5],
+      [  5, 18, 30, 40, 45, 40, 30, 18,  5],
+      [  5, 18, 30, 40, 45, 40, 30, 18,  5],
+      [  5, 15, 25, 35, 40, 35, 25, 15,  5],
+      [  0, 10, 20, 25, 30, 25, 20, 10,  0],
+      [ -8,  5, 12, 15, 15, 15, 12,  5, -8],
+      [-15, -8,  0,  5,  5,  5,  0, -8,-15]
     ];
 
     // 2단계 고도화: Zobrist 해싱 테이블 & 전치 테이블(Transposition Table) 초기화
@@ -1903,7 +1903,7 @@ class JanggiAI {
     };
   }
 
-  // 최적의 한 수 계산 (반복 심화 탐색 + 시간 예산 관리)
+  // 최적의 한 수 계산 (반복 심화 탐색 + 정적 탐색 연계 + 시간 예산 관리)
   // - 깊이 1부터 목표 깊이까지 차례로 완주하며, 시간 초과 시 "마지막으로 완주한 깊이"의 최선수를 반환
   // - 시간 초과로 중단된 깊이의 불완전한 점수는 신뢰하지 않고 폐기 (엉뚱한 수 선택 방지)
   getBestMove(team, level = 'mid', timeLimitMs = 0) {
@@ -1911,23 +1911,25 @@ class JanggiAI {
     let moves = this.getAllLegalMoves(team);
     if (moves.length === 0) return null; // 둘 수가 없음(외통수/기권)
 
-    // 초반 오프닝 정석 수(Opening Book) 탐색: 정석이 있으면 연산 없이 즉시 반환
+    // 초반 오프닝 정석 수(Opening Book) 탐색: 안전성 검증 통과 시 연산 없이 즉시 반환
     const turnCount = this.game.history.length;
-    const maxOpeningTurns = (level === 'easy' ? 6 : (level === 'mid' ? 8 : (level === 'hint' ? 8 : 10)));
+    const maxOpeningTurns = (level === 'easy' ? 4 : (level === 'mid' ? 8 : (level === 'hint' ? 8 : 10)));
     if (turnCount < maxOpeningTurns) {
       const openingMove = this.getOpeningMove(team, moves);
       if (openingMove) return openingMove;
     }
 
-    // [난이도별 목표 탐색 깊이] 초급 3수 / 중급 4수 / 고급 5수
-    let maxDepth = 3;
-    if (level === 'hard') maxDepth = 5;
+    // [난이도별 목표 탐색 깊이]
+    // 초급 2수 (친절한 대국) / 중급 4수 (+ 1-ply Quiescence) / 고급 6수 (+ 3-ply Quiescence = 최대 9수 수읽기)
+    let maxDepth = 4;
+    if (level === 'hard') maxDepth = 6;
     else if (level === 'mid') maxDepth = 4;
+    else if (level === 'easy') maxDepth = 2;
 
-    // [난이도별 시간 예산] 모바일에서 화면이 멈춘 듯한 체감을 줄이기 위해 2초 이내로 제한
-    const defaultBudget = { hint: 500, easy: 600, mid: 1000, hard: 1800 };
+    // [난이도별 시간 예산] 모바일 환경 쾌적성 보장 (초급 600ms, 중급 1200ms, 고급 2500ms)
+    const defaultBudget = { hint: 600, easy: 600, mid: 1200, hard: 2500 };
     this.searchStartTime = Date.now();
-    this.searchTimeLimit = timeLimitMs > 0 ? timeLimitMs : (defaultBudget[level] || 1000);
+    this.searchTimeLimit = timeLimitMs > 0 ? timeLimitMs : (defaultBudget[level] || 1200);
     this.isSearchTimeout = false;
     this.nodeCount = 0;
 
@@ -1940,10 +1942,12 @@ class JanggiAI {
 
     const isMax = team === TEAM_CHO;
     let bestMove = moves[0]; // 최악의 경우에도 둘 수 있는 수 확보
+    let candidateMoves = []; // 초급용 안전한 2순위 후보군
 
     for (let depth = 1; depth <= maxDepth; depth++) {
       let iterBestMove = null;
       let iterBestScore = isMax ? -Infinity : Infinity;
+      let depthScores = [];
 
       for (const move of moves) {
         if (Date.now() - this.searchStartTime > this.searchTimeLimit) {
@@ -1965,6 +1969,8 @@ class JanggiAI {
         // 이 수의 탐색 도중 시간 초과가 났다면 점수가 불완전하므로 반영하지 않음
         if (this.isSearchTimeout) break;
 
+        depthScores.push({ move, score });
+
         if (isMax ? score > iterBestScore : score < iterBestScore) {
           iterBestScore = score;
           iterBestMove = move;
@@ -1975,6 +1981,7 @@ class JanggiAI {
       if (this.isSearchTimeout || !iterBestMove) break;
 
       bestMove = iterBestMove;
+      candidateMoves = depthScores;
       this.tt.set(currentHash, { depth, score: iterBestScore, bestMove });
 
       // 다음 깊이에서는 이번 최선수를 가장 먼저 검토 (가지치기 효율 극대화)
@@ -1984,15 +1991,64 @@ class JanggiAI {
       if (Math.abs(iterBestScore) > 90000) break;
     }
 
+    // [초급 난이도 조정]: 25% 확률로 2순위 안전수(점수 차이 150점 이내) 선택하여 사용자에게 승리 기회 부여 (어처구니없는 자살수는 방지)
+    if (level === 'easy' && candidateMoves.length > 1 && !this.game.isCheck(team)) {
+      if (Math.random() < 0.25) {
+        candidateMoves.sort((a, b) => isMax ? b.score - a.score : a.score - b.score);
+        const secondChoice = candidateMoves[1];
+        if (secondChoice && Math.abs(secondChoice.score - candidateMoves[0].score) < 150) {
+          return secondChoice.move;
+        }
+      }
+    }
+
     return bestMove;
   }
 
-  // 오프닝 정석 수(Opening Book) 패턴 추출 (초/한 양방향 완벽 지원 + 전술 해설 탑재)
+  // 오프닝 착수 안전성 검사 (상대에게 기물을 그냥 갖다 바치거나 손해 보는 교환인지 사전 차단)
+  isValidOpeningMove(move, team) {
+    if (!move) return false;
+    const oppTeam = team === TEAM_CHO ? TEAM_HAN : TEAM_CHO;
+
+    // 가상 착수
+    this.game.board[move.toY][move.toX] = move.piece;
+    this.game.board[move.fromY][move.fromX] = null;
+
+    // 착수 후 상대가 즉시 이 기물을 잡을 수 있는지 확인
+    const oppMoves = this.getAllRawMoves(oppTeam);
+    const threats = oppMoves.filter(m => m.toX === move.toX && m.toY === move.toY);
+
+    let isSafe = true;
+    if (threats.length > 0) {
+      const myPieceVal = this.pieceValues[move.piece.type] || 0;
+      // 아군이 다시 그 칸을 잡아서 반격/보호할 수 있는지 확인
+      const myDefenders = this.getAllRawMoves(team).filter(m => m.toX === move.toX && m.toY === move.toY);
+
+      if (myDefenders.length === 0) {
+        // 보호 기물이 전혀 없음 -> 자살수이므로 오프닝 즉시 무효!
+        isSafe = false;
+      } else {
+        // 상대가 더 가치 낮은 기물로 때릴 수 있다면 손해 교환
+        const minOppVal = Math.min(...threats.map(t => this.pieceValues[t.piece.type] || 0));
+        if (minOppVal < myPieceVal) {
+          isSafe = false;
+        }
+      }
+    }
+
+    // 복원
+    this.game.board[move.fromY][move.fromX] = move.piece;
+    this.game.board[move.toY][move.toX] = move.captured;
+
+    return isSafe;
+  }
+
+  // 오프닝 정석 수(Opening Book) 패턴 추출 (초/한 양방향 완벽 지원 + 안전성 사전 검증 탑재)
   getOpeningMove(team, moves) {
     if (team === TEAM_CHO) {
       // 1. 초(楚) 면포 안착: 포(包)를 궁성 중앙(x=4, y=2)으로 이동하는 수
       const cannonToCenter = moves.find(m => m.piece.type === TYPE_CANNON && m.toX === 4 && m.toY === 2);
-      if (cannonToCenter) {
+      if (cannonToCenter && this.isValidOpeningMove(cannonToCenter, team)) {
         return {
           ...cannonToCenter,
           badge: '🏰 면포 안착',
@@ -2003,7 +2059,7 @@ class JanggiAI {
 
       // 2. 초(楚) 귀마/진마 진출: 마(馬)를 궁성 귀(x=2, 3, 5, 6, y=2)로 진출시키는 수
       const horseAdvance = moves.find(m => m.piece.type === TYPE_HORSE && (m.toX === 2 || m.toX === 3 || m.toX === 5 || m.toX === 6) && m.toY === 2);
-      if (horseAdvance) {
+      if (horseAdvance && this.isValidOpeningMove(horseAdvance, team)) {
         return {
           ...horseAdvance,
           badge: '🐎 귀마 진출',
@@ -2014,7 +2070,7 @@ class JanggiAI {
 
       // 3. 초(楚) 차길 열기: 졸(卒)을 안쪽으로 모으는 합졸 수
       const pawnOpen = moves.find(m => m.piece.type === TYPE_PAWN && (m.toX === 1 || m.toX === 7) && m.toY === 3);
-      if (pawnOpen) {
+      if (pawnOpen && this.isValidOpeningMove(pawnOpen, team)) {
         return {
           ...pawnOpen,
           badge: '🚗 차길 열기',
@@ -2025,7 +2081,7 @@ class JanggiAI {
 
       // 4. 초(楚) 중앙 상 진출
       const elephantAdvance = moves.find(m => m.piece.type === TYPE_ELEPHANT && (m.toX === 2 || m.toX === 4 || m.toX === 6) && m.toY === 4);
-      if (elephantAdvance) {
+      if (elephantAdvance && this.isValidOpeningMove(elephantAdvance, team)) {
         return {
           ...elephantAdvance,
           badge: '🐘 상(象) 진출',
@@ -2036,7 +2092,7 @@ class JanggiAI {
     } else if (team === TEAM_HAN) {
       // 1. 한(漢) 면포 안착: 포(包)를 궁성 중앙(x=4, y=7)으로 이동하는 수
       const cannonToCenterHan = moves.find(m => m.piece.type === TYPE_CANNON && m.toX === 4 && m.toY === 7);
-      if (cannonToCenterHan) {
+      if (cannonToCenterHan && this.isValidOpeningMove(cannonToCenterHan, team)) {
         return {
           ...cannonToCenterHan,
           badge: '🏰 면포 안착',
@@ -2047,7 +2103,7 @@ class JanggiAI {
 
       // 2. 한(漢) 귀마/진마 진출: 마(馬)를 궁성 귀(x=2, 3, 5, 6, y=7)로 진출시키는 수
       const horseAdvanceHan = moves.find(m => m.piece.type === TYPE_HORSE && (m.toX === 2 || m.toX === 3 || m.toX === 5 || m.toX === 6) && m.toY === 7);
-      if (horseAdvanceHan) {
+      if (horseAdvanceHan && this.isValidOpeningMove(horseAdvanceHan, team)) {
         return {
           ...horseAdvanceHan,
           badge: '🐎 귀마 진출',
@@ -2058,7 +2114,7 @@ class JanggiAI {
 
       // 3. 한(漢) 차길 열기: 병(兵)을 안쪽으로 모으는 합병 수
       const pawnOpenHan = moves.find(m => m.piece.type === TYPE_PAWN && (m.toX === 1 || m.toX === 7) && m.toY === 6);
-      if (pawnOpenHan) {
+      if (pawnOpenHan && this.isValidOpeningMove(pawnOpenHan, team)) {
         return {
           ...pawnOpenHan,
           badge: '🚗 차길 열기',
@@ -2069,7 +2125,7 @@ class JanggiAI {
 
       // 4. 한(漢) 중앙 상 진출
       const elephantAdvanceHan = moves.find(m => m.piece.type === TYPE_ELEPHANT && (m.toX === 2 || m.toX === 4 || m.toX === 6) && m.toY === 5);
-      if (elephantAdvanceHan) {
+      if (elephantAdvanceHan && this.isValidOpeningMove(elephantAdvanceHan, team)) {
         return {
           ...elephantAdvanceHan,
           badge: '🐘 상(象) 진출',
@@ -2079,6 +2135,101 @@ class JanggiAI {
       }
     }
     return null;
+  }
+
+  // 기물 포획(Capture) 전용 수집기 (정적 탐색용)
+  getAllCaptureMoves(team) {
+    const legalMoves = this.getAllLegalMoves(team);
+    const captures = [];
+    for (let i = 0; i < legalMoves.length; i++) {
+      if (legalMoves[i].captured) {
+        captures.push(legalMoves[i]);
+      }
+    }
+    return captures;
+  }
+
+  // 정적 탐색 (Quiescence Search)
+  // 기물 교환이 일어나는 국면을 끝까지 파고들어 지평선 효과(Horizon Effect)와 떡수를 원천 방지
+  quiescence(alpha, beta, isMaximizing, level, qDepth = 0, maxQDepth = 3) {
+    this.nodeCount++;
+    if (this.isSearchTimeout || ((this.nodeCount & 127) === 0 && Date.now() - this.searchStartTime > this.searchTimeLimit)) {
+      this.isSearchTimeout = true;
+      return this.evaluatePosition(level);
+    }
+
+    const standPat = this.evaluatePosition(level);
+
+    if (qDepth >= maxQDepth) {
+      return standPat;
+    }
+
+    const team = isMaximizing ? TEAM_CHO : TEAM_HAN;
+
+    if (isMaximizing) {
+      if (standPat >= beta) return beta;
+      if (standPat > alpha) alpha = standPat;
+
+      let captureMoves = this.getAllCaptureMoves(team);
+      if (captureMoves.length === 0) return standPat;
+
+      captureMoves = this.orderMoves(captureMoves, team, qDepth);
+
+      for (const m of captureMoves) {
+        if (this.isSearchTimeout) break;
+
+        // Delta Pruning (가장 큰 이득을 봐도 alpha를 못 넘기면 건너뜀)
+        const capVal = this.pieceValues[m.captured.type] || 0;
+        if (standPat + capVal + 100 < alpha) continue;
+
+        this.game.board[m.toY][m.toX] = m.piece;
+        this.game.board[m.fromY][m.fromX] = null;
+
+        const score = this.quiescence(alpha, beta, false, level, qDepth + 1, maxQDepth);
+
+        this.game.board[m.fromY][m.fromX] = m.piece;
+        this.game.board[m.toY][m.toX] = m.captured;
+
+        if (score > alpha) {
+          alpha = score;
+        }
+        if (beta <= alpha) {
+          break; // Beta Cutoff
+        }
+      }
+      return alpha;
+    } else {
+      if (standPat <= alpha) return alpha;
+      if (standPat < beta) beta = standPat;
+
+      let captureMoves = this.getAllCaptureMoves(team);
+      if (captureMoves.length === 0) return standPat;
+
+      captureMoves = this.orderMoves(captureMoves, team, qDepth);
+
+      for (const m of captureMoves) {
+        if (this.isSearchTimeout) break;
+
+        const capVal = this.pieceValues[m.captured.type] || 0;
+        if (standPat - capVal - 100 > beta) continue;
+
+        this.game.board[m.toY][m.toX] = m.piece;
+        this.game.board[m.fromY][m.fromX] = null;
+
+        const score = this.quiescence(alpha, beta, true, level, qDepth + 1, maxQDepth);
+
+        this.game.board[m.fromY][m.fromX] = m.piece;
+        this.game.board[m.toY][m.toX] = m.captured;
+
+        if (score < beta) {
+          beta = score;
+        }
+        if (beta <= alpha) {
+          break; // Alpha Cutoff
+        }
+      }
+      return beta;
+    }
   }
 
   // Alpha-Beta 재귀 탐색 (2단계 전치 테이블 및 킬러 무브 연동, 타임아웃 긴급 탈출 가드 탑재)
@@ -2102,9 +2253,18 @@ class JanggiAI {
       if (alpha >= beta) return ttEntry.score;
     }
 
-    // 깊이 한계 도달 시 국면 정밀 평가
+    // 깊이 한계 도달 시: 난이도별 정적 탐색(Quiescence Search) 적용
     if (depth <= 0) {
-      return this.evaluatePosition(level);
+      if (level === 'hard') {
+        // 고급: 최대 3-ply 정적 탐색으로 기물 교환과 떡수를 끝까지 읽음
+        return this.quiescence(alpha, beta, isMaximizing, level, 0, 3);
+      } else if (level === 'mid') {
+        // 중급: 1-ply 정적 탐색으로 직전 교환 손익 확인
+        return this.quiescence(alpha, beta, isMaximizing, level, 0, 1);
+      } else {
+        // 초급: 즉시 국면 평가 반환
+        return this.evaluatePosition(level);
+      }
     }
 
     let moves = this.getAllLegalMoves(team);
@@ -2207,15 +2367,33 @@ class JanggiAI {
   }
 
   // 국면 정밀 평가 함수 (기물가치 + 위치가치 + 궁성안전도 + 장군 위협 + 기물 보호망/차포연계)
+  // 국면 정밀 평가 함수 (기물가치 + 위치가치 + 궁성안전도 + 장군 위협 + 궁성압박 + 차포연계)
   evaluatePosition(level) {
     let score = 0;
     const isHanCheck = this.game.isCheck(TEAM_HAN);
     const isChoCheck = this.game.isCheck(TEAM_CHO);
 
     // 상대 궁 장군 상태 시 큰 가산점, 내 궁 장군 상태 시 큰 감점
-    const checkBonus = level === 'hard' ? 900 : 700;
+    const checkBonus = level === 'hard' ? 1400 : (level === 'mid' ? 800 : 500);
     if (isHanCheck) score += checkBonus;
     if (isChoCheck) score -= checkBonus;
+
+    // 공식 덤 점수 (한나라 덤 1.5점 = 150점 차감하여 한에 보정)
+    score -= 150;
+
+    // 궁성 위치 탐색 (고급/중급 궁성 포위 압박 평가용)
+    let choKingPos = null;
+    let hanKingPos = null;
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const p = this.game.board[y][x];
+        if (!p) continue;
+        if (p.type === TYPE_KING) {
+          if (p.team === TEAM_CHO) choKingPos = { x, y };
+          else hanKingPos = { x, y };
+        }
+      }
+    }
 
     for (let y = 0; y < ROWS; y++) {
       for (let x = 0; x < COLS; x++) {
@@ -2224,7 +2402,7 @@ class JanggiAI {
 
         let val = this.pieceValues[p.type] || 0;
 
-        // 위치 보너스 (PST)
+        // 1. 위치 보너스 (PST)
         if (p.type === TYPE_PAWN) {
           const pstY = p.team === TEAM_CHO ? y : (9 - y);
           val += this.pawnPST[pstY][x];
@@ -2233,16 +2411,29 @@ class JanggiAI {
           val += this.horsePST[pstY][x];
         } else if (p.type === TYPE_CAR) {
           // 차(車)의 활로: 전방이 뚫려있고 전선에 침투할수록 강력함
-          val += (Math.abs(4 - x) < 3 ? 40 : 20);
+          val += (Math.abs(4 - x) < 3 ? 35 : 15);
           if ((p.team === TEAM_CHO && y >= 6) || (p.team === TEAM_HAN && y <= 3)) {
-            val += (level === 'hard' ? 100 : 70); // 상대 진영 침투 보너스
+            val += (level === 'hard' ? 140 : 80); // 상대 진영 3선 침투 보너스
           }
         } else if (p.type === TYPE_CANNON) {
           // 면포(중앙 궁성 앞 x=4, y=2 또는 y=7) 보너스
-          if (x === 4 && (y === 2 || y === 7)) val += (level === 'hard' ? 110 : 80);
+          if (x === 4 && (y === 2 || y === 7)) val += (level === 'hard' ? 130 : 80);
         } else if (p.type === TYPE_KING || p.type === TYPE_ADVISOR) {
           // 궁성 내부 수비 안정도
-          val += (level === 'hard' ? 60 : 40);
+          val += (level === 'hard' ? 70 : 40);
+        }
+
+        // 2. 궁성 포위 압박(Palace Pressure) 가산점 (고급/중급)
+        if (level === 'hard' || level === 'mid') {
+          const targetKing = p.team === TEAM_CHO ? hanKingPos : choKingPos;
+          if (targetKing) {
+            const dist = Math.abs(targetKing.x - x) + Math.abs(targetKing.y - y);
+            if (dist <= 3) {
+              if (p.type === TYPE_CAR) val += (level === 'hard' ? 100 : 50);
+              else if (p.type === TYPE_CANNON) val += (level === 'hard' ? 80 : 40);
+              else if (p.type === TYPE_HORSE) val += (level === 'hard' ? 50 : 25);
+            }
+          }
         }
 
         if (p.team === TEAM_CHO) score += val;
@@ -3542,28 +3733,28 @@ const aiLevelData = {
     id: 'opt-ai-easy',
     val: 'easy',
     title: '초급 수준 안내',
-    detail: '기본 포진과 알뜰한 행마로 균형감 있게 겨루는 단계입니다. 기본 장기 규칙과 수비를 지키며 흥미진진한 대국을 즐기실 수 있습니다.',
-    speech: '초급을 선택하셨습니다. 기본 포진과 알뜰한 행마의 흥미진진한 대국입니다.',
+    detail: '기본 포진과 알뜰한 행마로 어설픈 자살수 없이 균형감 있게 겨루는 단계입니다. 편안하고 흥미진진한 대국을 즐기실 수 있습니다.',
+    speech: '초급을 선택하셨습니다. 기본 행마로 즐기는 편안하고 흥미진진한 대국입니다.',
     shortTitle: '기력: 초급',
-    shortSub: '(정석 행마)'
+    shortSub: '(초보·입문용)'
   },
   mid: {
     id: 'opt-ai-mid',
     val: 'mid',
     title: '중급 수준 안내',
-    detail: '동네 경로당이나 기원의 장기 고수 수준입니다! 날카로운 수읽기와 탄탄한 궁성 수비로 팽팽한 진검승부를 펼칩니다.',
-    speech: '중급을 선택하셨습니다. 경로당과 기원 고수 수준의 팽팽한 대국입니다.',
+    detail: '기원 1~3급 수준의 탄탄한 장기 고수입니다! 정적 탐색과 전술적 기물 교환, 탄탄한 궁성 수비로 팽팽한 진검승부를 펼칩니다.',
+    speech: '중급을 선택하셨습니다. 기원 고수 수준의 탄탄한 대국입니다.',
     shortTitle: '기력: 중급',
-    shortSub: '(기원 고수)'
+    shortSub: '(기원 1~3급)'
   },
   hard: {
     id: 'opt-ai-hard',
     val: 'hard',
-    title: '고급 수준 안내',
-    detail: '아마 1급 이상의 특급 고수 수준입니다! 깊은 심층 수읽기와 빈틈없는 공수 연계로 프로에 버금가는 최상의 승부를 펼칩니다.',
-    speech: '고급을 선택하셨습니다. 아마 일급 이상 고수 레벨의 심층 수읽기 대국입니다.',
+    title: '고급(유단자) 수준 안내',
+    detail: '아마 유단자(1단 이상)의 특급 고수 수준입니다! 최대 9수 심층 수읽기와 Quiescence 정적 탐색으로 어설픈 수 없이 빈틈없는 철벽 방어와 맹공을 펼쳐 일반인이 이기기 어렵습니다.',
+    speech: '고급을 선택하셨습니다. 아마 유단자급의 빈틈없는 심층 수읽기 대국입니다.',
     shortTitle: '기력: 고급',
-    shortSub: '(1급 이상 고수)'
+    shortSub: '(유단자급 고수)'
   }
 };
 
