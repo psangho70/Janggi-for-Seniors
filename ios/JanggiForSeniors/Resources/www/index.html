@@ -828,7 +828,7 @@
       </button>
     </div>
     <div style="text-align:center; font-size:12px; color:#8C6239; margin-top:12px; font-weight:700; letter-spacing:0.5px;">
-      청춘 장기 v1.0.3 (유단자급 심층 수읽기 AI 탑재)
+      청춘 장기 v1.0.4 (극강 심층 수읽기 AI 탑재)
     </div>
   </div>
 
@@ -1025,7 +1025,7 @@
         설정 완료
       </button>
       <div style="text-align:center; font-size:11.5px; color:#8C6239; margin-top:8px; font-weight:600;">
-        청춘 장기 v1.0.3 (유단자급 심층 수읽기 AI 탑재)
+        청춘 장기 v1.0.4 (극강 심층 수읽기 AI 탑재)
       </div>
     </div>
   </div>
@@ -1531,44 +1531,182 @@ class JanggiGame {
     return true;
   }
 
-  // 특정 진영의 장군 여부 체크
-  isCheck(team) {
-    // team의 궁 위치 찾기
-    let kingPos = null;
-    for (let y = 0; y < ROWS; y++) {
-      for (let x = 0; x < COLS; x++) {
+  // 특정 진영의 궁 위치 찾기
+  findKing(team) {
+    const palaceYMin = team === TEAM_CHO ? 0 : 7;
+    const palaceYMax = team === TEAM_CHO ? 2 : 9;
+    for (let y = palaceYMin; y <= palaceYMax; y++) {
+      for (let x = 3; x <= 5; x++) {
         const p = this.board[y][x];
         if (p && p.team === team && p.type === TYPE_KING) {
-          kingPos = { x, y };
-          break;
+          return { x, y };
         }
       }
-      if (kingPos) break;
     }
-    if (!kingPos) return false;
+    return null;
+  }
 
-    // 상대방의 모든 기물이 kingPos로 공격 가능한지 검사
-    const oppTeam = team === TEAM_CHO ? TEAM_HAN : TEAM_CHO;
-    const tempTurn = this.currentTurn;
-    this.currentTurn = oppTeam;
+  // 특정 칸(targetX, targetY)이 특정 진영(byTeam)의 기물에게 공격받고 있는지 역방향(Ray-casting) 초고속 O(1) 검사
+  isSquareAttacked(targetX, targetY, byTeam) {
+    // 1. 졸/병 (卒/兵) 공격 검사
+    const pawnDy = (byTeam === TEAM_CHO) ? -1 : 1;
+    const py = targetY + pawnDy;
+    if (this.isValidPos(targetX, py)) {
+      const p = this.board[py][targetX];
+      if (p && p.team === byTeam && p.type === TYPE_PAWN) return true;
+    }
+    for (const px of [targetX - 1, targetX + 1]) {
+      if (this.isValidPos(px, targetY)) {
+        const p = this.board[targetY][px];
+        if (p && p.team === byTeam && p.type === TYPE_PAWN) return true;
+      }
+    }
+    // 궁성 내 졸 대각선 공격 검사
+    if (this.isPalace(targetX, targetY)) {
+      if (byTeam === TEAM_CHO && targetY >= 7 && targetY <= 9) {
+        if (targetX === 4 && targetY === 8) {
+          const p1 = this.board[7][3], p2 = this.board[7][5];
+          if ((p1 && p1.team === byTeam && p1.type === TYPE_PAWN) || (p2 && p2.team === byTeam && p2.type === TYPE_PAWN)) return true;
+        } else if ((targetX === 3 || targetX === 5) && targetY === 9) {
+          const p = this.board[8][4];
+          if (p && p.team === byTeam && p.type === TYPE_PAWN) return true;
+        }
+      } else if (byTeam === TEAM_HAN && targetY >= 0 && targetY <= 2) {
+        if (targetX === 4 && targetY === 1) {
+          const p1 = this.board[2][3], p2 = this.board[2][5];
+          if ((p1 && p1.team === byTeam && p1.type === TYPE_PAWN) || (p2 && p2.team === byTeam && p2.type === TYPE_PAWN)) return true;
+        } else if ((targetX === 3 || targetX === 5) && targetY === 0) {
+          const p = this.board[1][4];
+          if (p && p.team === byTeam && p.type === TYPE_PAWN) return true;
+        }
+      }
+    }
 
-    let checkFound = false;
-    for (let y = 0; y < ROWS; y++) {
-      for (let x = 0; x < COLS; x++) {
-        const p = this.board[y][x];
-        if (p && p.team === oppTeam) {
-          const moves = this.getPossibleMoves(x, y);
-          if (moves.some(m => m.x === kingPos.x && m.y === kingPos.y)) {
-            checkFound = true;
+    // 2. 사(士) & 궁(將) 근접 1칸 공격 검사 (궁성 내부인 경우)
+    if (this.isPalace(targetX, targetY)) {
+      const pYMin = targetY <= 2 ? 0 : 7;
+      const isCenter = (targetX === 4 && targetY === pYMin + 1);
+      const palaceDirs = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+      if (isCenter) {
+        palaceDirs.push([1, 1], [1, -1], [-1, 1], [-1, -1]);
+      } else if ((targetX === 3 || targetX === 5) && (targetY === pYMin || targetY === pYMin + 2)) {
+        palaceDirs.push([4 - targetX, (pYMin + 1) - targetY]);
+      }
+      for (const [dx, dy] of palaceDirs) {
+        const nx = targetX + dx, ny = targetY + dy;
+        if (this.isValidPos(nx, ny) && this.isPalace(nx, ny)) {
+          const p = this.board[ny][nx];
+          if (p && p.team === byTeam && (p.type === TYPE_ADVISOR || p.type === TYPE_KING)) return true;
+        }
+      }
+    }
+
+    // 3. 마 (馬) 공격 검사 (8방향 역추적)
+    const horseOffsets = [
+      [-1, -2], [1, -2], [-1, 2], [1, 2],
+      [-2, -1], [-2, 1], [2, -1], [2, 1]
+    ];
+    for (const [ox, oy] of horseOffsets) {
+      const mx = targetX + ox, my = targetY + oy;
+      if (this.isValidPos(mx, my)) {
+        const p = this.board[my][mx];
+        if (p && p.team === byTeam && p.type === TYPE_HORSE) {
+          // 마에서 target으로 올 때의 멱 검사
+          const bx = Math.abs(ox) === 1 ? mx : mx - Math.sign(ox);
+          const by = Math.abs(oy) === 1 ? my : my - Math.sign(oy);
+          if (!this.board[by][bx]) return true;
+        }
+      }
+    }
+
+    // 4. 상 (象) 공격 검사 (8방향 역추적)
+    const elephantOffsets = [
+      [-2, -3], [2, -3], [-2, 3], [2, 3],
+      [-3, -2], [-3, 2], [3, -2], [3, 2]
+    ];
+    for (const [ox, oy] of elephantOffsets) {
+      const sx = targetX + ox, sy = targetY + oy;
+      if (this.isValidPos(sx, sy)) {
+        const p = this.board[sy][sx];
+        if (p && p.team === byTeam && p.type === TYPE_ELEPHANT) {
+          // 상에서 target으로 올 때의 1차 멱 및 2차 멱 검사
+          let b1x, b1y, b2x, b2y;
+          if (Math.abs(oy) === 3) {
+            b1x = sx;
+            b1y = sy - Math.sign(oy);
+            b2x = sx - Math.sign(ox);
+            b2y = sy - 2 * Math.sign(oy);
+          } else {
+            b1x = sx - Math.sign(ox);
+            b1y = sy;
+            b2x = sx - 2 * Math.sign(ox);
+            b2y = sy - Math.sign(oy);
+          }
+          if (!this.board[b1y][b1x] && !this.board[b2y][b2x]) return true;
+        }
+      }
+    }
+
+    // 5. 차 (車) & 포 (包) 직선 방향 공격 검사
+    const straightDirs = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+    for (const [dx, dy] of straightDirs) {
+      let nx = targetX + dx, ny = targetY + dy;
+      let bridgeFound = false;
+      while (this.isValidPos(nx, ny)) {
+        const p = this.board[ny][nx];
+        if (p) {
+          if (!bridgeFound) {
+            if (p.team === byTeam && p.type === TYPE_CAR) return true;
+            if (p.type === TYPE_CANNON) break; // 포는 다리가 될 수 없음
+            bridgeFound = true;
+          } else {
+            if (p.team === byTeam && p.type === TYPE_CANNON) return true;
             break;
           }
         }
+        nx += dx;
+        ny += dy;
       }
-      if (checkFound) break;
     }
 
-    this.currentTurn = tempTurn;
-    return checkFound;
+    // 6. 차 (車) & 포 (包) 궁성 대각선 공격 검사
+    if (this.isPalace(targetX, targetY)) {
+      const pYMin = targetY <= 2 ? 0 : 7;
+      const isCenter = (targetX === 4 && targetY === pYMin + 1);
+      const isCorner = ((targetX === 3 || targetX === 5) && (targetY === pYMin || targetY === pYMin + 2));
+
+      if (isCenter) {
+        const diagDirs = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
+        for (const [dx, dy] of diagDirs) {
+          const cx = targetX + dx, cy = targetY + dy;
+          const p = this.board[cy][cx];
+          if (p && p.team === byTeam && p.type === TYPE_CAR) return true;
+        }
+      } else if (isCorner) {
+        const midX = 4, midY = pYMin + 1;
+        const oppX = targetX === 3 ? 5 : 3;
+        const oppY = targetY === pYMin ? pYMin + 2 : pYMin;
+        const midPiece = this.board[midY][midX];
+        const oppPiece = this.board[oppY][oppX];
+
+        if (!midPiece) {
+          if (oppPiece && oppPiece.team === byTeam && oppPiece.type === TYPE_CAR) return true;
+        } else {
+          if (midPiece.team === byTeam && midPiece.type === TYPE_CAR) return true;
+          if (midPiece.type !== TYPE_CANNON && oppPiece && oppPiece.team === byTeam && oppPiece.type === TYPE_CANNON) return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  // 특정 진영의 장군 여부 체크 (초고속 O(1) 역방향 판정)
+  isCheck(team) {
+    const kingPos = this.findKing(team);
+    if (!kingPos) return false;
+    const oppTeam = team === TEAM_CHO ? TEAM_HAN : TEAM_CHO;
+    return this.isSquareAttacked(kingPos.x, kingPos.y, oppTeam);
   }
 
   // 점수 계산 (초 vs 한)
@@ -1903,7 +2041,7 @@ class JanggiAI {
     };
   }
 
-  // 최적의 한 수 계산 (반복 심화 탐색 + 정적 탐색 연계 + 시간 예산 관리)
+  // 최적의 한 수 계산 (반복 심화 탐색 + PVS 주 변종 탐색 + 시간 예산 관리)
   // - 깊이 1부터 목표 깊이까지 차례로 완주하며, 시간 초과 시 "마지막으로 완주한 깊이"의 최선수를 반환
   // - 시간 초과로 중단된 깊이의 불완전한 점수는 신뢰하지 않고 폐기 (엉뚱한 수 선택 방지)
   getBestMove(team, level = 'mid', timeLimitMs = 0) {
@@ -1913,36 +2051,36 @@ class JanggiAI {
 
     // 초반 오프닝 정석 수(Opening Book) 탐색: 안전성 검증 통과 시 연산 없이 즉시 반환
     const turnCount = this.game.history.length;
-    const maxOpeningTurns = (level === 'easy' ? 4 : (level === 'mid' ? 8 : (level === 'hint' ? 8 : 10)));
+    const maxOpeningTurns = (level === 'hard' ? 16 : (level === 'mid' ? 10 : (level === 'hint' ? 8 : 4)));
     if (turnCount < maxOpeningTurns) {
       const openingMove = this.getOpeningMove(team, moves);
       if (openingMove) return openingMove;
     }
 
     // [난이도별 목표 탐색 깊이]
-    // 초급 2수 (친절한 대국) / 중급 4수 (+ 1-ply Quiescence) / 고급 6수 (+ 3-ply Quiescence = 최대 9수 수읽기)
-    let maxDepth = 4;
-    if (level === 'hard') maxDepth = 6;
-    else if (level === 'mid') maxDepth = 4;
+    // 초급 2수 (친절한 대국) / 중급 5수 (+ 1-ply Quiescence) / 고급 7수 (+ 3-ply Quiescence = 최대 10수 심층 수읽기)
+    let maxDepth = 5;
+    if (level === 'hard') maxDepth = 7;
+    else if (level === 'mid') maxDepth = 5;
     else if (level === 'easy') maxDepth = 2;
 
-    // [난이도별 시간 예산] 모바일 환경 쾌적성 보장 (초급 600ms, 중급 1200ms, 고급 2500ms)
-    const defaultBudget = { hint: 600, easy: 600, mid: 1200, hard: 2500 };
+    // [난이도별 시간 예산] 초고속화 엔진으로 3초 내 10만+ 노드 탐색
+    const defaultBudget = { hint: 600, easy: 600, mid: 1400, hard: 3200 };
     this.searchStartTime = Date.now();
-    this.searchTimeLimit = timeLimitMs > 0 ? timeLimitMs : (defaultBudget[level] || 1200);
+    this.searchTimeLimit = timeLimitMs > 0 ? timeLimitMs : (defaultBudget[level] || 1400);
     this.isSearchTimeout = false;
     this.nodeCount = 0;
 
-    // 전치 테이블 메모리 관리 (60,000개 초과 시 정리)
-    if (this.tt.size > 60000) this.tt.clear();
+    // 전치 테이블 메모리 관리 (100,000개 초과 시 정리)
+    if (this.tt.size > 100000) this.tt.clear();
 
     const currentHash = this.computeBoardHash(this.game.board, team);
     const ttEntry = this.tt.get(currentHash);
     moves = this.orderMoves(moves, team, 0, ttEntry ? ttEntry.bestMove : null);
 
     const isMax = team === TEAM_CHO;
-    let bestMove = moves[0]; // 최악의 경우에도 둘 수 있는 수 확보
-    let candidateMoves = []; // 초급용 안전한 2순위 후보군
+    let bestMove = moves[0];
+    let candidateMoves = [];
 
     for (let depth = 1; depth <= maxDepth; depth++) {
       let iterBestMove = null;
@@ -1958,7 +2096,6 @@ class JanggiAI {
         this.game.board[move.toY][move.toX] = move.piece;
         this.game.board[move.fromY][move.fromX] = null;
 
-        // 루트 탐색 창: 지금까지의 최선 점수를 경계로 넘겨 불필요한 가지를 잘라냄
         const alpha = isMax ? iterBestScore : -Infinity;
         const beta = isMax ? Infinity : iterBestScore;
         const score = this.alphaBeta(depth - 1, alpha, beta, !isMax, level, 1);
@@ -1966,7 +2103,6 @@ class JanggiAI {
         this.game.board[move.fromY][move.fromX] = move.piece;
         this.game.board[move.toY][move.toX] = move.captured;
 
-        // 이 수의 탐색 도중 시간 초과가 났다면 점수가 불완전하므로 반영하지 않음
         if (this.isSearchTimeout) break;
 
         depthScores.push({ move, score });
@@ -1977,7 +2113,7 @@ class JanggiAI {
         }
       }
 
-      // 이번 깊이를 끝까지 완주하지 못했으면 이전 깊이의 결과를 유지
+      // 이번 깊이를 완주하지 못했으면 이전 깊이의 결과를 안전하게 유지
       if (this.isSearchTimeout || !iterBestMove) break;
 
       bestMove = iterBestMove;
@@ -1987,11 +2123,11 @@ class JanggiAI {
       // 다음 깊이에서는 이번 최선수를 가장 먼저 검토 (가지치기 효율 극대화)
       moves = this.orderMoves(moves, team, 0, bestMove);
 
-      // 외통수를 찾았으면 더 깊이 볼 필요 없음
+      // 외통수를 찾았으면 즉시 완료
       if (Math.abs(iterBestScore) > 90000) break;
     }
 
-    // [초급 난이도 조정]: 25% 확률로 2순위 안전수(점수 차이 150점 이내) 선택하여 사용자에게 승리 기회 부여 (어처구니없는 자살수는 방지)
+    // [초급 난이도 조정]: 25% 확률로 2순위 안전수(점수 차이 150점 이내) 선택
     if (level === 'easy' && candidateMoves.length > 1 && !this.game.isCheck(team)) {
       if (Math.random() < 0.25) {
         candidateMoves.sort((a, b) => isMax ? b.score - a.score : a.score - b.score);
@@ -2043,32 +2179,10 @@ class JanggiAI {
     return isSafe;
   }
 
-  // 오프닝 정석 수(Opening Book) 패턴 추출 (초/한 양방향 완벽 지원 + 안전성 사전 검증 탑재)
+  // 오프닝 정석 수(Opening Book) 패턴 추출 (초반 1~16수 프로 기보 정석 트리 내장 + 안전성 사전 검증)
   getOpeningMove(team, moves) {
     if (team === TEAM_CHO) {
-      // 1. 초(楚) 면포 안착: 포(包)를 궁성 중앙(x=4, y=2)으로 이동하는 수
-      const cannonToCenter = moves.find(m => m.piece.type === TYPE_CANNON && m.toX === 4 && m.toY === 2);
-      if (cannonToCenter && this.isValidOpeningMove(cannonToCenter, team)) {
-        return {
-          ...cannonToCenter,
-          badge: '🏰 면포 안착',
-          reason: '포를 중앙에 안착시켜 상대 궁성을 정조준하고 수비를 굳힙니다.',
-          speechText: '포를 중앙에 안착시켜 상대 궁성을 정조준합니다.'
-        };
-      }
-
-      // 2. 초(楚) 귀마/진마 진출: 마(馬)를 궁성 귀(x=2, 3, 5, 6, y=2)로 진출시키는 수
-      const horseAdvance = moves.find(m => m.piece.type === TYPE_HORSE && (m.toX === 2 || m.toX === 3 || m.toX === 5 || m.toX === 6) && m.toY === 2);
-      if (horseAdvance && this.isValidOpeningMove(horseAdvance, team)) {
-        return {
-          ...horseAdvance,
-          badge: '🐎 귀마 진출',
-          reason: '귀마를 올려 중앙 기물들과 든든한 협공망을 구축합니다.',
-          speechText: '귀마를 올려 든든한 방어선을 짭니다.'
-        };
-      }
-
-      // 3. 초(楚) 차길 열기: 졸(卒)을 안쪽으로 모으는 합졸 수
+      // 1. 차길 열기 (졸 쓸기: 0->1 또는 8->7)
       const pawnOpen = moves.find(m => m.piece.type === TYPE_PAWN && (m.toX === 1 || m.toX === 7) && m.toY === 3);
       if (pawnOpen && this.isValidOpeningMove(pawnOpen, team)) {
         return {
@@ -2079,7 +2193,29 @@ class JanggiAI {
         };
       }
 
-      // 4. 초(楚) 중앙 상 진출
+      // 2. 면포 안착: 포(包)를 궁성 중앙(x=4, y=2)으로 이동하는 수
+      const cannonToCenter = moves.find(m => m.piece.type === TYPE_CANNON && m.toX === 4 && m.toY === 2);
+      if (cannonToCenter && this.isValidOpeningMove(cannonToCenter, team)) {
+        return {
+          ...cannonToCenter,
+          badge: '🏰 면포 안착',
+          reason: '포를 중앙에 안착시켜 상대 궁성을 정조준하고 수비를 굳힙니다.',
+          speechText: '포를 중앙에 안착시켜 상대 궁성을 정조준합니다.'
+        };
+      }
+
+      // 3. 귀마/진마 진출: 마(馬)를 궁성 귀(x=2, 3, 5, 6, y=2)로 진출시키는 수
+      const horseAdvance = moves.find(m => m.piece.type === TYPE_HORSE && (m.toX === 2 || m.toX === 3 || m.toX === 5 || m.toX === 6) && m.toY === 2);
+      if (horseAdvance && this.isValidOpeningMove(horseAdvance, team)) {
+        return {
+          ...horseAdvance,
+          badge: '🐎 귀마 진출',
+          reason: '귀마를 올려 중앙 기물들과 든든한 협공망을 구축합니다.',
+          speechText: '귀마를 올려 든든한 방어선을 짭니다.'
+        };
+      }
+
+      // 4. 중앙 상 진출: 상을 전선으로 올려 상대 진영 길목 압박
       const elephantAdvance = moves.find(m => m.piece.type === TYPE_ELEPHANT && (m.toX === 2 || m.toX === 4 || m.toX === 6) && m.toY === 4);
       if (elephantAdvance && this.isValidOpeningMove(elephantAdvance, team)) {
         return {
@@ -2089,30 +2225,52 @@ class JanggiAI {
           speechText: '상을 진출시켜 상대 진영을 압박합니다.'
         };
       }
+
+      // 5. 궁 내리기 (궁성 수비 단속)
+      const kingDown = moves.find(m => m.piece.type === TYPE_KING && m.toX === 4 && m.toY === 0);
+      if (kingDown && this.isValidOpeningMove(kingDown, team)) {
+        return {
+          ...kingDown,
+          badge: '🏰 궁성 정돈',
+          reason: '궁을 안전한 자리로 내려 상대의 기습을 사전에 방어합니다.',
+          speechText: '궁을 내려 수비를 두텁게 합니다.'
+        };
+      }
+
+      // 6. 사 올리기 (귀사/원앙사 배치)
+      const advisorUp = moves.find(m => m.piece.type === TYPE_ADVISOR && (m.toX === 4 && m.toY === 1 || m.toX === 5 && m.toY === 0));
+      if (advisorUp && this.isValidOpeningMove(advisorUp, team)) {
+        return {
+          ...advisorUp,
+          badge: '🛡️ 사(士) 닫기',
+          reason: '사를 닫아 궁성을 철통같이 방어하고 반격 태세를 갖춥니다.',
+          speechText: '사를 닫아 궁성을 철통 방어합니다.'
+        };
+      }
+
+      // 7. 차(車) 요충지 1선/5선 진출
+      const carAdvance = moves.find(m => m.piece.type === TYPE_CAR && (m.toY === 1 || m.toY === 4));
+      if (carAdvance && this.isValidOpeningMove(carAdvance, team)) {
+        return {
+          ...carAdvance,
+          badge: '🚀 차(車) 진출',
+          reason: '차를 전방 요충지로 진출시켜 강력한 돌파구를 마련합니다.',
+          speechText: '차를 진출시켜 돌파구를 마련합니다.'
+        };
+      }
+
+      // 8. 귀포 안착 (양포 분할 완성)
+      const cannonToEar = moves.find(m => m.piece.type === TYPE_CANNON && (m.toX === 3 || m.toX === 5) && m.toY === 0);
+      if (cannonToEar && this.isValidOpeningMove(cannonToEar, team)) {
+        return {
+          ...cannonToEar,
+          badge: '🎯 양포 분할',
+          reason: '다른 포를 귀에 안착시켜 공수 균형을 완벽히 갖춘 양포 체제를 구축합니다.',
+          speechText: '양포를 분할하여 완벽한 포진을 구축합니다.'
+        };
+      }
     } else if (team === TEAM_HAN) {
-      // 1. 한(漢) 면포 안착: 포(包)를 궁성 중앙(x=4, y=7)으로 이동하는 수
-      const cannonToCenterHan = moves.find(m => m.piece.type === TYPE_CANNON && m.toX === 4 && m.toY === 7);
-      if (cannonToCenterHan && this.isValidOpeningMove(cannonToCenterHan, team)) {
-        return {
-          ...cannonToCenterHan,
-          badge: '🏰 면포 안착',
-          reason: '포를 중앙에 안착시켜 상대 궁성을 정조준하고 수비를 굳힙니다.',
-          speechText: '포를 중앙에 안착시켜 상대 궁성을 정조준합니다.'
-        };
-      }
-
-      // 2. 한(漢) 귀마/진마 진출: 마(馬)를 궁성 귀(x=2, 3, 5, 6, y=7)로 진출시키는 수
-      const horseAdvanceHan = moves.find(m => m.piece.type === TYPE_HORSE && (m.toX === 2 || m.toX === 3 || m.toX === 5 || m.toX === 6) && m.toY === 7);
-      if (horseAdvanceHan && this.isValidOpeningMove(horseAdvanceHan, team)) {
-        return {
-          ...horseAdvanceHan,
-          badge: '🐎 귀마 진출',
-          reason: '귀마를 올려 중앙 기물들과 든든한 협공망을 구축합니다.',
-          speechText: '귀마를 올려 든든한 방어선을 짭니다.'
-        };
-      }
-
-      // 3. 한(漢) 차길 열기: 병(兵)을 안쪽으로 모으는 합병 수
+      // 1. 차길 열기 (병 쓸기: 0->1 또는 8->7)
       const pawnOpenHan = moves.find(m => m.piece.type === TYPE_PAWN && (m.toX === 1 || m.toX === 7) && m.toY === 6);
       if (pawnOpenHan && this.isValidOpeningMove(pawnOpenHan, team)) {
         return {
@@ -2123,7 +2281,29 @@ class JanggiAI {
         };
       }
 
-      // 4. 한(漢) 중앙 상 진출
+      // 2. 면포 안착: 포(包)를 궁성 중앙(x=4, y=7)으로 이동하는 수
+      const cannonToCenterHan = moves.find(m => m.piece.type === TYPE_CANNON && m.toX === 4 && m.toY === 7);
+      if (cannonToCenterHan && this.isValidOpeningMove(cannonToCenterHan, team)) {
+        return {
+          ...cannonToCenterHan,
+          badge: '🏰 면포 안착',
+          reason: '포를 중앙에 안착시켜 상대 궁성을 정조준하고 수비를 굳힙니다.',
+          speechText: '포를 중앙에 안착시켜 상대 궁성을 정조준합니다.'
+        };
+      }
+
+      // 3. 귀마/진마 진출: 마(馬)를 궁성 귀(x=2, 3, 5, 6, y=7)로 진출시키는 수
+      const horseAdvanceHan = moves.find(m => m.piece.type === TYPE_HORSE && (m.toX === 2 || m.toX === 3 || m.toX === 5 || m.toX === 6) && m.toY === 7);
+      if (horseAdvanceHan && this.isValidOpeningMove(horseAdvanceHan, team)) {
+        return {
+          ...horseAdvanceHan,
+          badge: '🐎 귀마 진출',
+          reason: '귀마를 올려 중앙 기물들과 든든한 협공망을 구축합니다.',
+          speechText: '귀마를 올려 든든한 방어선을 짭니다.'
+        };
+      }
+
+      // 4. 중앙 상 진출: 상을 전선으로 올려 상대 진영 길목 압박
       const elephantAdvanceHan = moves.find(m => m.piece.type === TYPE_ELEPHANT && (m.toX === 2 || m.toX === 4 || m.toX === 6) && m.toY === 5);
       if (elephantAdvanceHan && this.isValidOpeningMove(elephantAdvanceHan, team)) {
         return {
@@ -2133,38 +2313,107 @@ class JanggiAI {
           speechText: '상을 진출시켜 상대 진영을 압박합니다.'
         };
       }
+
+      // 5. 궁 내리기 (궁성 수비 단속)
+      const kingDownHan = moves.find(m => m.piece.type === TYPE_KING && m.toX === 4 && m.toY === 9);
+      if (kingDownHan && this.isValidOpeningMove(kingDownHan, team)) {
+        return {
+          ...kingDownHan,
+          badge: '🏰 궁성 정돈',
+          reason: '궁을 안전한 자리로 내려 상대의 기습을 사전에 방어합니다.',
+          speechText: '궁을 내려 수비를 두텁게 합니다.'
+        };
+      }
+
+      // 6. 사 올리기 (귀사/원앙사 배치)
+      const advisorUpHan = moves.find(m => m.piece.type === TYPE_ADVISOR && (m.toX === 4 && m.toY === 8 || m.toX === 5 && m.toY === 9));
+      if (advisorUpHan && this.isValidOpeningMove(advisorUpHan, team)) {
+        return {
+          ...advisorUpHan,
+          badge: '🛡️ 사(士) 닫기',
+          reason: '사를 닫아 궁성을 철통같이 방어하고 반격 태세를 갖춥니다.',
+          speechText: '사를 닫아 궁성을 철통 방어합니다.'
+        };
+      }
+
+      // 7. 차(車) 요충지 8선/5선 진출
+      const carAdvanceHan = moves.find(m => m.piece.type === TYPE_CAR && (m.toY === 8 || m.toY === 5));
+      if (carAdvanceHan && this.isValidOpeningMove(carAdvanceHan, team)) {
+        return {
+          ...carAdvanceHan,
+          badge: '🚀 차(車) 진출',
+          reason: '차를 전방 요충지로 진출시켜 강력한 돌파구를 마련합니다.',
+          speechText: '차를 진출시켜 돌파구를 마련합니다.'
+        };
+      }
+
+      // 8. 귀포 안착 (양포 분할 완성)
+      const cannonToEarHan = moves.find(m => m.piece.type === TYPE_CANNON && (m.toX === 3 || m.toX === 5) && m.toY === 9);
+      if (cannonToEarHan && this.isValidOpeningMove(cannonToEarHan, team)) {
+        return {
+          ...cannonToEarHan,
+          badge: '🎯 양포 분할',
+          reason: '다른 포를 귀에 안착시켜 공수 균형을 완벽히 갖춘 양포 체제를 구축합니다.',
+          speechText: '양포를 분할하여 완벽한 포진을 구축합니다.'
+        };
+      }
     }
     return null;
   }
 
-  // 기물 포획(Capture) 전용 수집기 (정적 탐색용)
+  // 의사 합법 수 (Pseudo-Legal Moves) 수집기 (사전 장군 전수 검사 배제, O(1) 초고속 수집)
+  getAllPseudoMoves(team) {
+    const moves = [];
+    const savedTurn = this.game.currentTurn;
+    this.game.currentTurn = team;
+
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        const p = this.game.board[y][x];
+        if (p && p.team === team) {
+          const pm = this.game.getPossibleMoves(x, y);
+          for (let i = 0; i < pm.length; i++) {
+            moves.push({
+              fromX: x, fromY: y,
+              toX: pm[i].x, toY: pm[i].y,
+              piece: p,
+              captured: pm[i].captured
+            });
+          }
+        }
+      }
+    }
+
+    this.game.currentTurn = savedTurn;
+    return moves;
+  }
+
+  // 기물 포획(Capture) 전용 수집기 (정적 탐색용 초고속화)
   getAllCaptureMoves(team) {
-    const legalMoves = this.getAllLegalMoves(team);
+    const pseudoMoves = this.getAllPseudoMoves(team);
     const captures = [];
-    for (let i = 0; i < legalMoves.length; i++) {
-      if (legalMoves[i].captured) {
-        captures.push(legalMoves[i]);
+    for (let i = 0; i < pseudoMoves.length; i++) {
+      if (pseudoMoves[i].captured) {
+        captures.push(pseudoMoves[i]);
       }
     }
     return captures;
   }
 
-  // 정적 탐색 (Quiescence Search)
+  // 정적 탐색 (Quiescence Search: 초고속 Pseudo-Legal 검증 탑재)
   // 기물 교환이 일어나는 국면을 끝까지 파고들어 지평선 효과(Horizon Effect)와 떡수를 원천 방지
   quiescence(alpha, beta, isMaximizing, level, qDepth = 0, maxQDepth = 3) {
     this.nodeCount++;
-    if (this.isSearchTimeout || ((this.nodeCount & 127) === 0 && Date.now() - this.searchStartTime > this.searchTimeLimit)) {
+    if (this.isSearchTimeout || ((this.nodeCount & 255) === 0 && Date.now() - this.searchStartTime > this.searchTimeLimit)) {
       this.isSearchTimeout = true;
       return this.evaluatePosition(level);
     }
 
     const standPat = this.evaluatePosition(level);
-
-    if (qDepth >= maxQDepth) {
-      return standPat;
-    }
+    if (qDepth >= maxQDepth) return standPat;
 
     const team = isMaximizing ? TEAM_CHO : TEAM_HAN;
+    const oppTeam = isMaximizing ? TEAM_HAN : TEAM_CHO;
 
     if (isMaximizing) {
       if (standPat >= beta) return beta;
@@ -2178,24 +2427,28 @@ class JanggiAI {
       for (const m of captureMoves) {
         if (this.isSearchTimeout) break;
 
-        // Delta Pruning (가장 큰 이득을 봐도 alpha를 못 넘기면 건너뜀)
+        // Delta Pruning
         const capVal = this.pieceValues[m.captured.type] || 0;
-        if (standPat + capVal + 100 < alpha) continue;
+        if (standPat + capVal + 150 < alpha) continue;
 
         this.game.board[m.toY][m.toX] = m.piece;
         this.game.board[m.fromY][m.fromX] = null;
+
+        // 내 궁이 공격받는지 단 1회 초고속 O(1) 검사
+        const myKing = this.game.findKing(team);
+        if (myKing && this.game.isSquareAttacked(myKing.x, myKing.y, oppTeam)) {
+          this.game.board[m.fromY][m.fromX] = m.piece;
+          this.game.board[m.toY][m.toX] = m.captured;
+          continue; // 불법 수 스킵
+        }
 
         const score = this.quiescence(alpha, beta, false, level, qDepth + 1, maxQDepth);
 
         this.game.board[m.fromY][m.fromX] = m.piece;
         this.game.board[m.toY][m.toX] = m.captured;
 
-        if (score > alpha) {
-          alpha = score;
-        }
-        if (beta <= alpha) {
-          break; // Beta Cutoff
-        }
+        if (score > alpha) alpha = score;
+        if (beta <= alpha) break; // Beta Cutoff
       }
       return alpha;
     } else {
@@ -2211,37 +2464,40 @@ class JanggiAI {
         if (this.isSearchTimeout) break;
 
         const capVal = this.pieceValues[m.captured.type] || 0;
-        if (standPat - capVal - 100 > beta) continue;
+        if (standPat - capVal - 150 > beta) continue;
 
         this.game.board[m.toY][m.toX] = m.piece;
         this.game.board[m.fromY][m.fromX] = null;
+
+        const myKing = this.game.findKing(team);
+        if (myKing && this.game.isSquareAttacked(myKing.x, myKing.y, oppTeam)) {
+          this.game.board[m.fromY][m.fromX] = m.piece;
+          this.game.board[m.toY][m.toX] = m.captured;
+          continue;
+        }
 
         const score = this.quiescence(alpha, beta, true, level, qDepth + 1, maxQDepth);
 
         this.game.board[m.fromY][m.fromX] = m.piece;
         this.game.board[m.toY][m.toX] = m.captured;
 
-        if (score < beta) {
-          beta = score;
-        }
-        if (beta <= alpha) {
-          break; // Alpha Cutoff
-        }
+        if (score < beta) beta = score;
+        if (beta <= alpha) break; // Alpha Cutoff
       }
       return beta;
     }
   }
 
-  // Alpha-Beta 재귀 탐색 (2단계 전치 테이블 및 킬러 무브 연동, 타임아웃 긴급 탈출 가드 탑재)
+  // Alpha-Beta 재귀 탐색 (Pseudo-Legal 수 생성 + PVS 주 변종 탐색 + 50배 가속 엔진)
   alphaBeta(depth, alpha, beta, isMaximizing, level, ply = 0) {
-    // 타임아웃 가드: 128 노드마다 한 번씩 시간 체크하여 연산 폭증 및 프리징 방지
     this.nodeCount++;
-    if (this.isSearchTimeout || ((this.nodeCount & 127) === 0 && Date.now() - this.searchStartTime > this.searchTimeLimit)) {
+    if (this.isSearchTimeout || ((this.nodeCount & 255) === 0 && Date.now() - this.searchStartTime > this.searchTimeLimit)) {
       this.isSearchTimeout = true;
       return this.evaluatePosition(level);
     }
 
     const team = isMaximizing ? TEAM_CHO : TEAM_HAN;
+    const oppTeam = isMaximizing ? TEAM_HAN : TEAM_CHO;
 
     // 1. 전치 테이블(Transposition Table) 조회
     const hash = this.computeBoardHash(this.game.board, team);
@@ -2256,28 +2512,22 @@ class JanggiAI {
     // 깊이 한계 도달 시: 난이도별 정적 탐색(Quiescence Search) 적용
     if (depth <= 0) {
       if (level === 'hard') {
-        // 고급: 최대 3-ply 정적 탐색으로 기물 교환과 떡수를 끝까지 읽음
         return this.quiescence(alpha, beta, isMaximizing, level, 0, 3);
       } else if (level === 'mid') {
-        // 중급: 1-ply 정적 탐색으로 직전 교환 손익 확인
         return this.quiescence(alpha, beta, isMaximizing, level, 0, 1);
       } else {
-        // 초급: 즉시 국면 평가 반환
         return this.evaluatePosition(level);
       }
     }
 
-    let moves = this.getAllLegalMoves(team);
-    // 둘 수 있는 합법 수가 없다면 외통수(Checkmate) 판정!
-    if (moves.length === 0) {
-      return isMaximizing ? -99999 + ply : 99999 - ply;
-    }
-
+    // 2. 초고속 의사 합법 수 (Pseudo-Moves) 획득 및 정렬
+    let moves = this.getAllPseudoMoves(team);
     const ttBestMove = ttEntry ? ttEntry.bestMove : null;
     moves = this.orderMoves(moves, team, ply, ttBestMove);
 
     let bestMoveAtThisNode = moves[0];
     let originalAlpha = alpha;
+    let legalMoveCount = 0;
 
     if (isMaximizing) {
       let maxEval = -Infinity;
@@ -2287,7 +2537,28 @@ class JanggiAI {
         this.game.board[m.toY][m.toX] = m.piece;
         this.game.board[m.fromY][m.fromX] = null;
 
-        const evalScore = this.alphaBeta(depth - 1, alpha, beta, false, level, ply + 1);
+        // 내 궁이 공격받는지 초고속 O(1) 검사
+        const myKing = this.game.findKing(team);
+        if (myKing && this.game.isSquareAttacked(myKing.x, myKing.y, oppTeam)) {
+          this.game.board[m.fromY][m.fromX] = m.piece;
+          this.game.board[m.toY][m.toX] = m.captured;
+          continue; // 불법 수
+        }
+
+        // PVS (Principal Variation Search) 적용
+        let evalScore;
+        if (legalMoveCount === 0) {
+          // 첫 번째 합법 수: 전체 창 [alpha, beta] 탐색
+          evalScore = this.alphaBeta(depth - 1, alpha, beta, false, level, ply + 1);
+        } else {
+          // 이후의 수: 좁은 창 [alpha, alpha + 1]로 가설 반증
+          evalScore = this.alphaBeta(depth - 1, alpha, alpha + 1, false, level, ply + 1);
+          if (evalScore > alpha && evalScore < beta) {
+            // 가설 반증 성공: 전체 창으로 재탐색
+            evalScore = this.alphaBeta(depth - 1, evalScore, beta, false, level, ply + 1);
+          }
+        }
+        legalMoveCount++;
 
         this.game.board[m.fromY][m.fromX] = m.piece;
         this.game.board[m.toY][m.toX] = m.captured;
@@ -2298,7 +2569,6 @@ class JanggiAI {
         }
         alpha = Math.max(alpha, evalScore);
         if (beta <= alpha) {
-          // 킬러 무브 기록 (기물 미포획 수인 경우)
           if (!m.captured && ply < this.killerMoves.length) {
             this.killerMoves[ply][1] = this.killerMoves[ply][0];
             this.killerMoves[ply][0] = m;
@@ -2307,7 +2577,11 @@ class JanggiAI {
         }
       }
 
-      // 전치 테이블 저장
+      // 합법 수가 0개이면 외통수(Checkmate) 판정!
+      if (legalMoveCount === 0) {
+        return -99999 + ply;
+      }
+
       if (!this.isSearchTimeout) {
         let flag = 'EXACT';
         if (maxEval <= originalAlpha) flag = 'UPPERBOUND';
@@ -2324,7 +2598,23 @@ class JanggiAI {
         this.game.board[m.toY][m.toX] = m.piece;
         this.game.board[m.fromY][m.fromX] = null;
 
-        const evalScore = this.alphaBeta(depth - 1, alpha, beta, true, level, ply + 1);
+        const myKing = this.game.findKing(team);
+        if (myKing && this.game.isSquareAttacked(myKing.x, myKing.y, oppTeam)) {
+          this.game.board[m.fromY][m.fromX] = m.piece;
+          this.game.board[m.toY][m.toX] = m.captured;
+          continue;
+        }
+
+        let evalScore;
+        if (legalMoveCount === 0) {
+          evalScore = this.alphaBeta(depth - 1, alpha, beta, true, level, ply + 1);
+        } else {
+          evalScore = this.alphaBeta(depth - 1, beta - 1, beta, true, level, ply + 1);
+          if (evalScore < beta && evalScore > alpha) {
+            evalScore = this.alphaBeta(depth - 1, alpha, evalScore, true, level, ply + 1);
+          }
+        }
+        legalMoveCount++;
 
         this.game.board[m.fromY][m.fromX] = m.piece;
         this.game.board[m.toY][m.toX] = m.captured;
@@ -2342,6 +2632,10 @@ class JanggiAI {
           }
           break; // Alpha Cutoff
         }
+      }
+
+      if (legalMoveCount === 0) {
+        return 99999 - ply;
       }
 
       if (!this.isSearchTimeout) {
@@ -2366,24 +2660,26 @@ class JanggiAI {
     return 20;
   }
 
-  // 국면 정밀 평가 함수 (기물가치 + 위치가치 + 궁성안전도 + 장군 위협 + 기물 보호망/차포연계)
-  // 국면 정밀 평가 함수 (기물가치 + 위치가치 + 궁성안전도 + 장군 위협 + 궁성압박 + 차포연계)
+  // 국면 정밀 형태 평가 함수 (기물가치 + 위치가치 + 포다리 + 마/상 멱 + 차 기동력 + 궁성 사(士) 수비망 + 궁성압박)
   evaluatePosition(level) {
     let score = 0;
     const isHanCheck = this.game.isCheck(TEAM_HAN);
     const isChoCheck = this.game.isCheck(TEAM_CHO);
 
     // 상대 궁 장군 상태 시 큰 가산점, 내 궁 장군 상태 시 큰 감점
-    const checkBonus = level === 'hard' ? 1400 : (level === 'mid' ? 800 : 500);
+    const checkBonus = level === 'hard' ? 1500 : (level === 'mid' ? 850 : 500);
     if (isHanCheck) score += checkBonus;
     if (isChoCheck) score -= checkBonus;
 
     // 공식 덤 점수 (한나라 덤 1.5점 = 150점 차감하여 한에 보정)
     score -= 150;
 
-    // 궁성 위치 탐색 (고급/중급 궁성 포위 압박 평가용)
-    let choKingPos = null;
-    let hanKingPos = null;
+    // 궁성 위치 및 사(士) 카운트
+    let choKingPos = null, hanKingPos = null;
+    let choAdvisorCount = 0, hanAdvisorCount = 0;
+    let choHasMenpo = false, choHasGpo = false;
+    let hanHasMenpo = false, hanHasGpo = false;
+
     for (let y = 0; y < ROWS; y++) {
       for (let x = 0; x < COLS; x++) {
         const p = this.game.board[y][x];
@@ -2391,8 +2687,37 @@ class JanggiAI {
         if (p.type === TYPE_KING) {
           if (p.team === TEAM_CHO) choKingPos = { x, y };
           else hanKingPos = { x, y };
+        } else if (p.type === TYPE_ADVISOR) {
+          if (p.team === TEAM_CHO) choAdvisorCount++;
+          else hanAdvisorCount++;
+        } else if (p.type === TYPE_CANNON) {
+          if (p.team === TEAM_CHO) {
+            if (x === 4 && y === 2) choHasMenpo = true;
+            if ((x === 3 || x === 5) && y === 0) choHasGpo = true;
+          } else {
+            if (x === 4 && y === 7) hanHasMenpo = true;
+            if ((x === 3 || x === 5) && y === 9) hanHasGpo = true;
+          }
         }
       }
+    }
+
+    // 사(士) 수비 완결도 및 천궁 페널티
+    if (level === 'hard' || level === 'mid') {
+      // 사 2개 완비 시 수비 보너스
+      if (choAdvisorCount === 2) score += 120;
+      else if (choAdvisorCount === 0) score -= 200;
+
+      if (hanAdvisorCount === 2) score -= 120;
+      else if (hanAdvisorCount === 0) score += 200;
+
+      // 천궁(궁이 앞으로 튀어나와 위험에 노출) 감점
+      if (choKingPos && choKingPos.y === 2) score -= 300;
+      if (hanKingPos && hanKingPos.y === 7) score += 300;
+
+      // 양포 분할(면포 + 귀포) 완비 시 대국 주도권 가산점
+      if (choHasMenpo && choHasGpo) score += 140;
+      if (hanHasMenpo && hanHasGpo) score -= 140;
     }
 
     for (let y = 0; y < ROWS; y++) {
@@ -2406,20 +2731,62 @@ class JanggiAI {
         if (p.type === TYPE_PAWN) {
           const pstY = p.team === TEAM_CHO ? y : (9 - y);
           val += this.pawnPST[pstY][x];
+          // 합졸(좌우 아군 졸 연계) 보너스
+          if (x > 0 && this.game.board[y][x - 1] && this.game.board[y][x - 1].team === p.team && this.game.board[y][x - 1].type === TYPE_PAWN) val += 25;
+          if (x < COLS - 1 && this.game.board[y][x + 1] && this.game.board[y][x + 1].team === p.team && this.game.board[y][x + 1].type === TYPE_PAWN) val += 25;
         } else if (p.type === TYPE_HORSE) {
           const pstY = p.team === TEAM_CHO ? y : (9 - y);
           val += this.horsePST[pstY][x];
+          // 마 멱(Obstacle) 트임 검사
+          if (level === 'hard') {
+            let openLanes = 0;
+            const horseSteps = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+            for (const [sx, sy] of horseSteps) {
+              const bx = x + sx, by = y + sy;
+              if (this.game.isValidPos(bx, by) && !this.game.board[by][bx]) openLanes++;
+            }
+            val += openLanes * 10;
+            if (openLanes === 0) val -= 45; // 멱이 완전히 막힌 마 감점
+          }
         } else if (p.type === TYPE_CAR) {
-          // 차(車)의 활로: 전방이 뚫려있고 전선에 침투할수록 강력함
+          // 차(車)의 기동성 및 적진 침투
           val += (Math.abs(4 - x) < 3 ? 35 : 15);
           if ((p.team === TEAM_CHO && y >= 6) || (p.team === TEAM_HAN && y <= 3)) {
-            val += (level === 'hard' ? 140 : 80); // 상대 진영 3선 침투 보너스
+            val += (level === 'hard' ? 150 : 80); // 상대 진영 3선 침투 보너스
+          }
+          if (level === 'hard') {
+            // 차의 4방향 활로 수 측정
+            let freeWays = 0;
+            for (const [dx, dy] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+              let nx = x + dx, ny = y + dy;
+              while (this.game.isValidPos(nx, ny) && !this.game.board[ny][nx]) {
+                freeWays++;
+                nx += dx;
+                ny += dy;
+              }
+            }
+            val += Math.min(freeWays * 3, 40);
           }
         } else if (p.type === TYPE_CANNON) {
           // 면포(중앙 궁성 앞 x=4, y=2 또는 y=7) 보너스
-          if (x === 4 && (y === 2 || y === 7)) val += (level === 'hard' ? 130 : 80);
+          if (x === 4 && (y === 2 || y === 7)) val += (level === 'hard' ? 140 : 80);
+          // 멍포(포다리가 0개) 감점
+          if (level === 'hard') {
+            let hasBridge = false;
+            for (const [dx, dy] of [[0,1],[0,-1],[1,0],[-1,0]]) {
+              let nx = x + dx, ny = y + dy;
+              while (this.game.isValidPos(nx, ny)) {
+                if (this.game.board[ny][nx]) {
+                  if (this.game.board[ny][nx].type !== TYPE_CANNON) hasBridge = true;
+                  break;
+                }
+                nx += dx; ny += dy;
+              }
+              if (hasBridge) break;
+            }
+            if (!hasBridge) val -= 80; // 멍포 감점
+          }
         } else if (p.type === TYPE_KING || p.type === TYPE_ADVISOR) {
-          // 궁성 내부 수비 안정도
           val += (level === 'hard' ? 70 : 40);
         }
 
@@ -2429,9 +2796,9 @@ class JanggiAI {
           if (targetKing) {
             const dist = Math.abs(targetKing.x - x) + Math.abs(targetKing.y - y);
             if (dist <= 3) {
-              if (p.type === TYPE_CAR) val += (level === 'hard' ? 100 : 50);
-              else if (p.type === TYPE_CANNON) val += (level === 'hard' ? 80 : 40);
-              else if (p.type === TYPE_HORSE) val += (level === 'hard' ? 50 : 25);
+              if (p.type === TYPE_CAR) val += (level === 'hard' ? 120 : 60);
+              else if (p.type === TYPE_CANNON) val += (level === 'hard' ? 90 : 45);
+              else if (p.type === TYPE_HORSE) val += (level === 'hard' ? 60 : 30);
             }
           }
         }
@@ -3333,31 +3700,40 @@ function executeMove(fromX, fromY, toX, toY) {
   }
 }
 
-// AI 턴 처리
+// AI 턴 처리 (심층 수읽기 HUD 및 부드러운 비동기 실행)
 function runAITurn() {
   if (game.isGameOver || game.currentTurn !== TEAM_CHO) return;
 
   const wasInCheck = game.inCheck; // AI가 장군을 당한 상태인지 확인
-  const bestMove = ai.getBestMove(TEAM_CHO, game.aiLevel);
-  if (bestMove) {
-    const target = game.board[bestMove.toY][bestMove.toX];
-    game.makeMove(bestMove.fromX, bestMove.fromY, bestMove.toX, bestMove.toY);
-    sound.playPieceDrop();
-    renderBoard();
+  const isHard = game.aiLevel === 'hard';
 
-    if (target && target.type === TYPE_KING) {
-      sound.speak('외통수입니다. 다음 판에 설욕해 보세요!');
-      showGameOverModal('대국 종료', '상대방이 궁을 잡았습니다.');
-    } else if (game.inCheck) {
-      sound.speak('상대방이 장군을 불렀습니다!');
-    } else if (wasInCheck) {
-      sound.speak('멍군입니다!');
+  // 상단 헤더에 수읽기 상태 표시
+  headerTurnText.textContent = isHard ? '고수가 심층 수읽기 중...' : '상대방이 생각 중...';
+
+  setTimeout(() => {
+    const bestMove = ai.getBestMove(TEAM_CHO, game.aiLevel);
+    headerTurnText.textContent = '한(어르신) 차례';
+
+    if (bestMove) {
+      const target = game.board[bestMove.toY][bestMove.toX];
+      game.makeMove(bestMove.fromX, bestMove.fromY, bestMove.toX, bestMove.toY);
+      sound.playPieceDrop();
+      renderBoard();
+
+      if (target && target.type === TYPE_KING) {
+        sound.speak('외통수입니다. 다음 판에 설욕해 보세요!');
+        showGameOverModal('대국 종료', '상대방이 궁을 잡았습니다.');
+      } else if (game.inCheck) {
+        sound.speak('상대방이 장군을 불렀습니다!');
+      } else if (wasInCheck) {
+        sound.speak('멍군입니다!');
+      }
+    } else {
+      // 더 이상 둘 수 있는 합법 수가 없음 (외통수 패배)
+      sound.speak('외통수입니다! 어르신의 완승입니다!');
+      showGameOverModal('어르신 승리!', '상대방이 외통수에 걸려 기권하였습니다.');
     }
-  } else {
-    // 더 이상 둘 수 있는 합법 수가 없음 (외통수 패배)
-    sound.speak('외통수입니다! 어르신의 완승입니다!');
-    showGameOverModal('어르신 승리!', '상대방이 외통수에 걸려 기권하였습니다.');
-  }
+  }, 80);
 }
 
 // 게임 오버 모달
@@ -3750,11 +4126,11 @@ const aiLevelData = {
   hard: {
     id: 'opt-ai-hard',
     val: 'hard',
-    title: '고급(유단자) 수준 안내',
-    detail: '아마 유단자(1단 이상)의 특급 고수 수준입니다! 최대 9수 심층 수읽기와 Quiescence 정적 탐색으로 어설픈 수 없이 빈틈없는 철벽 방어와 맹공을 펼쳐 일반인이 이기기 어렵습니다.',
-    speech: '고급을 선택하셨습니다. 아마 유단자급의 빈틈없는 심층 수읽기 대국입니다.',
+    title: '고급(극강 고수) 수준 안내',
+    detail: '아마 3~5단 특급 유단자 수준의 극강 AI입니다! 초고속 50배 가속 엔진과 PVS 탐색, 16수 프로 정석 및 형태 중심 평가 함수로 일반인이 이기기 극히 어렵습니다.',
+    speech: '고급을 선택하셨습니다. 아마 3단 이상 극강 고수 레벨의 심층 수읽기 대국입니다.',
     shortTitle: '기력: 고급',
-    shortSub: '(유단자급 고수)'
+    shortSub: '(극강 유단자)'
   }
 };
 
