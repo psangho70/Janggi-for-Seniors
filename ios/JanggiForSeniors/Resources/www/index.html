@@ -828,7 +828,7 @@
       </button>
     </div>
     <div style="text-align:center; font-size:12px; color:#8C6239; margin-top:12px; font-weight:700; letter-spacing:0.5px;">
-      청춘 장기 v1.0.4 (극강 심층 수읽기 AI 탑재)
+      청춘 장기 v1.0.5 (오프닝·평가·외통수 탐색 정밀화)
     </div>
   </div>
 
@@ -1025,7 +1025,7 @@
         설정 완료
       </button>
       <div style="text-align:center; font-size:11.5px; color:#8C6239; margin-top:8px; font-weight:600;">
-        청춘 장기 v1.0.4 (극강 심층 수읽기 AI 탑재)
+        청춘 장기 v1.0.5 (오프닝·평가·외통수 탐색 정밀화)
       </div>
     </div>
   </div>
@@ -2049,9 +2049,11 @@ class JanggiAI {
     let moves = this.getAllLegalMoves(team);
     if (moves.length === 0) return null; // 둘 수가 없음(외통수/기권)
 
-    // 초반 오프닝 정석 수(Opening Book) 탐색: 안전성 검증 통과 시 연산 없이 즉시 반환
+    // 초반 오프닝 정석 수(Opening Book) 탐색
+    // - 고급: 규칙 기반 정석이 수읽기보다 약해 초반 실수의 원인이었으므로 사용하지 않음 (첫 수부터 수읽기)
+    // - 중급/초급: 초반 2수(반수 4)까지만 정석 사용
     const turnCount = this.game.history.length;
-    const maxOpeningTurns = (level === 'hard' ? 16 : (level === 'mid' ? 10 : (level === 'hint' ? 8 : 4)));
+    const maxOpeningTurns = (level === 'hard' ? 0 : (level === 'hint' ? 8 : 4));
     if (turnCount < maxOpeningTurns) {
       const openingMove = this.getOpeningMove(team, moves);
       if (openingMove) return openingMove;
@@ -2400,8 +2402,8 @@ class JanggiAI {
     return captures;
   }
 
-  // 정적 탐색 (Quiescence Search: 초고속 Pseudo-Legal 검증 탑재)
-  // 기물 교환이 일어나는 국면을 끝까지 파고들어 지평선 효과(Horizon Effect)와 떡수를 원천 방지
+  // 정적 탐색 (Quiescence Search: 장군 회피 및 포획 연쇄 탐색 완비)
+  // 기물 교환 및 장군 상태를 끝까지 파고들어 지평선 효과(Horizon Effect)와 떡수를 원천 방지
   quiescence(alpha, beta, isMaximizing, level, qDepth = 0, maxQDepth = 3) {
     this.nodeCount++;
     if (this.isSearchTimeout || ((this.nodeCount & 255) === 0 && Date.now() - this.searchStartTime > this.searchTimeLimit)) {
@@ -2409,38 +2411,58 @@ class JanggiAI {
       return this.evaluatePosition(level);
     }
 
-    const standPat = this.evaluatePosition(level);
-    if (qDepth >= maxQDepth) return standPat;
-
     const team = isMaximizing ? TEAM_CHO : TEAM_HAN;
     const oppTeam = isMaximizing ? TEAM_HAN : TEAM_CHO;
+    const myKing = this.game.findKing(team);
+    const inCheck = myKing ? this.game.isSquareAttacked(myKing.x, myKing.y, oppTeam) : false;
+
+    let standPat = -Infinity;
+    if (!inCheck) {
+      standPat = this.evaluatePosition(level);
+      if (qDepth >= maxQDepth) return standPat;
+
+      if (isMaximizing) {
+        if (standPat >= beta) return beta;
+        if (standPat > alpha) alpha = standPat;
+      } else {
+        if (standPat <= alpha) return alpha;
+        if (standPat < beta) beta = standPat;
+      }
+    } else {
+      // 장군 상태(Check)인 경우 멍군을 찾기 위해 탐색 깊이 2수 연장
+      if (qDepth >= maxQDepth + 2) return this.evaluatePosition(level);
+    }
+
+    // 장군 상태면 모든 합법 회피 수(멍군), 평상시엔 포획 수만 탐색
+    let moves = inCheck ? this.getAllPseudoMoves(team) : this.getAllCaptureMoves(team);
+    if (moves.length === 0) {
+      if (inCheck) return isMaximizing ? -99999 + qDepth : 99999 - qDepth;
+      return standPat;
+    }
+
+    moves = this.orderMoves(moves, team, qDepth);
+    let legalMovesFound = 0;
 
     if (isMaximizing) {
-      if (standPat >= beta) return beta;
-      if (standPat > alpha) alpha = standPat;
-
-      let captureMoves = this.getAllCaptureMoves(team);
-      if (captureMoves.length === 0) return standPat;
-
-      captureMoves = this.orderMoves(captureMoves, team, qDepth);
-
-      for (const m of captureMoves) {
+      for (const m of moves) {
         if (this.isSearchTimeout) break;
 
-        // Delta Pruning
-        const capVal = this.pieceValues[m.captured.type] || 0;
-        if (standPat + capVal + 150 < alpha) continue;
+        // Delta Pruning (장군 아닐 때만 적용)
+        if (!inCheck && m.captured) {
+          const capVal = this.pieceValues[m.captured.type] || 0;
+          if (standPat + capVal + 150 < alpha) continue;
+        }
 
         this.game.board[m.toY][m.toX] = m.piece;
         this.game.board[m.fromY][m.fromX] = null;
 
-        // 내 궁이 공격받는지 단 1회 초고속 O(1) 검사
-        const myKing = this.game.findKing(team);
-        if (myKing && this.game.isSquareAttacked(myKing.x, myKing.y, oppTeam)) {
+        const currKing = (m.piece.type === TYPE_KING) ? { x: m.toX, y: m.toY } : this.game.findKing(team);
+        if (currKing && this.game.isSquareAttacked(currKing.x, currKing.y, oppTeam)) {
           this.game.board[m.fromY][m.fromX] = m.piece;
           this.game.board[m.toY][m.toX] = m.captured;
           continue; // 불법 수 스킵
         }
+        legalMovesFound++;
 
         const score = this.quiescence(alpha, beta, false, level, qDepth + 1, maxQDepth);
 
@@ -2450,31 +2472,30 @@ class JanggiAI {
         if (score > alpha) alpha = score;
         if (beta <= alpha) break; // Beta Cutoff
       }
-      return alpha;
+
+      if (inCheck && legalMovesFound === 0) {
+        return -99999 + qDepth; // 외통패
+      }
+      return inCheck ? alpha : (legalMovesFound === 0 ? standPat : alpha);
     } else {
-      if (standPat <= alpha) return alpha;
-      if (standPat < beta) beta = standPat;
-
-      let captureMoves = this.getAllCaptureMoves(team);
-      if (captureMoves.length === 0) return standPat;
-
-      captureMoves = this.orderMoves(captureMoves, team, qDepth);
-
-      for (const m of captureMoves) {
+      for (const m of moves) {
         if (this.isSearchTimeout) break;
 
-        const capVal = this.pieceValues[m.captured.type] || 0;
-        if (standPat - capVal - 150 > beta) continue;
+        if (!inCheck && m.captured) {
+          const capVal = this.pieceValues[m.captured.type] || 0;
+          if (standPat - capVal - 150 > beta) continue;
+        }
 
         this.game.board[m.toY][m.toX] = m.piece;
         this.game.board[m.fromY][m.fromX] = null;
 
-        const myKing = this.game.findKing(team);
-        if (myKing && this.game.isSquareAttacked(myKing.x, myKing.y, oppTeam)) {
+        const currKing = (m.piece.type === TYPE_KING) ? { x: m.toX, y: m.toY } : this.game.findKing(team);
+        if (currKing && this.game.isSquareAttacked(currKing.x, currKing.y, oppTeam)) {
           this.game.board[m.fromY][m.fromX] = m.piece;
           this.game.board[m.toY][m.toX] = m.captured;
           continue;
         }
+        legalMovesFound++;
 
         const score = this.quiescence(alpha, beta, true, level, qDepth + 1, maxQDepth);
 
@@ -2484,7 +2505,11 @@ class JanggiAI {
         if (score < beta) beta = score;
         if (beta <= alpha) break; // Alpha Cutoff
       }
-      return beta;
+
+      if (inCheck && legalMovesFound === 0) {
+        return 99999 - qDepth; // 외통패
+      }
+      return inCheck ? beta : (legalMovesFound === 0 ? standPat : beta);
     }
   }
 
@@ -2666,8 +2691,8 @@ class JanggiAI {
     const isHanCheck = this.game.isCheck(TEAM_HAN);
     const isChoCheck = this.game.isCheck(TEAM_CHO);
 
-    // 상대 궁 장군 상태 시 큰 가산점, 내 궁 장군 상태 시 큰 감점
-    const checkBonus = level === 'hard' ? 1500 : (level === 'mid' ? 850 : 500);
+    // 장군 상태 보너스 (차 1300점 대비 과도한 왜곡 방지: 30~50점 수준 정상화)
+    const checkBonus = level === 'hard' ? 50 : (level === 'mid' ? 40 : 25);
     if (isHanCheck) score += checkBonus;
     if (isChoCheck) score -= checkBonus;
 
@@ -2705,19 +2730,19 @@ class JanggiAI {
     // 사(士) 수비 완결도 및 천궁 페널티
     if (level === 'hard' || level === 'mid') {
       // 사 2개 완비 시 수비 보너스
-      if (choAdvisorCount === 2) score += 120;
-      else if (choAdvisorCount === 0) score -= 200;
+      if (choAdvisorCount === 2) score += 60;
+      else if (choAdvisorCount === 0) score -= 120;
 
-      if (hanAdvisorCount === 2) score -= 120;
-      else if (hanAdvisorCount === 0) score += 200;
+      if (hanAdvisorCount === 2) score -= 60;
+      else if (hanAdvisorCount === 0) score += 120;
 
       // 천궁(궁이 앞으로 튀어나와 위험에 노출) 감점
-      if (choKingPos && choKingPos.y === 2) score -= 300;
-      if (hanKingPos && hanKingPos.y === 7) score += 300;
+      if (choKingPos && choKingPos.y === 2) score -= 200;
+      if (hanKingPos && hanKingPos.y === 7) score += 200;
 
       // 양포 분할(면포 + 귀포) 완비 시 대국 주도권 가산점
-      if (choHasMenpo && choHasGpo) score += 140;
-      if (hanHasMenpo && hanHasGpo) score -= 140;
+      if (choHasMenpo && choHasGpo) score += 80;
+      if (hanHasMenpo && hanHasGpo) score -= 80;
     }
 
     for (let y = 0; y < ROWS; y++) {
@@ -2732,8 +2757,8 @@ class JanggiAI {
           const pstY = p.team === TEAM_CHO ? y : (9 - y);
           val += this.pawnPST[pstY][x];
           // 합졸(좌우 아군 졸 연계) 보너스
-          if (x > 0 && this.game.board[y][x - 1] && this.game.board[y][x - 1].team === p.team && this.game.board[y][x - 1].type === TYPE_PAWN) val += 25;
-          if (x < COLS - 1 && this.game.board[y][x + 1] && this.game.board[y][x + 1].team === p.team && this.game.board[y][x + 1].type === TYPE_PAWN) val += 25;
+          if (x > 0 && this.game.board[y][x - 1] && this.game.board[y][x - 1].team === p.team && this.game.board[y][x - 1].type === TYPE_PAWN) val += 15;
+          if (x < COLS - 1 && this.game.board[y][x + 1] && this.game.board[y][x + 1].team === p.team && this.game.board[y][x + 1].type === TYPE_PAWN) val += 15;
         } else if (p.type === TYPE_HORSE) {
           const pstY = p.team === TEAM_CHO ? y : (9 - y);
           val += this.horsePST[pstY][x];
@@ -2745,17 +2770,16 @@ class JanggiAI {
               const bx = x + sx, by = y + sy;
               if (this.game.isValidPos(bx, by) && !this.game.board[by][bx]) openLanes++;
             }
-            val += openLanes * 10;
-            if (openLanes === 0) val -= 45; // 멱이 완전히 막힌 마 감점
+            val += openLanes * 8;
+            if (openLanes === 0) val -= 30; // 멱이 완전히 막힌 마 감점
           }
         } else if (p.type === TYPE_CAR) {
           // 차(車)의 기동성 및 적진 침투
-          val += (Math.abs(4 - x) < 3 ? 35 : 15);
+          val += (Math.abs(4 - x) < 3 ? 25 : 10);
           if ((p.team === TEAM_CHO && y >= 6) || (p.team === TEAM_HAN && y <= 3)) {
-            val += (level === 'hard' ? 150 : 80); // 상대 진영 3선 침투 보너스
+            val += (level === 'hard' ? 50 : 30); // 상대 진영 침투 보너스 합리화
           }
           if (level === 'hard') {
-            // 차의 4방향 활로 수 측정
             let freeWays = 0;
             for (const [dx, dy] of [[0,1],[0,-1],[1,0],[-1,0]]) {
               let nx = x + dx, ny = y + dy;
@@ -2765,11 +2789,11 @@ class JanggiAI {
                 ny += dy;
               }
             }
-            val += Math.min(freeWays * 3, 40);
+            val += Math.min(freeWays * 2, 25);
           }
         } else if (p.type === TYPE_CANNON) {
           // 면포(중앙 궁성 앞 x=4, y=2 또는 y=7) 보너스
-          if (x === 4 && (y === 2 || y === 7)) val += (level === 'hard' ? 140 : 80);
+          if (x === 4 && (y === 2 || y === 7)) val += (level === 'hard' ? 80 : 50);
           // 멍포(포다리가 0개) 감점
           if (level === 'hard') {
             let hasBridge = false;
@@ -2784,21 +2808,21 @@ class JanggiAI {
               }
               if (hasBridge) break;
             }
-            if (!hasBridge) val -= 80; // 멍포 감점
+            if (!hasBridge) val -= 50; // 멍포 감점
           }
         } else if (p.type === TYPE_KING || p.type === TYPE_ADVISOR) {
-          val += (level === 'hard' ? 70 : 40);
+          val += (level === 'hard' ? 40 : 25);
         }
 
-        // 2. 궁성 포위 압박(Palace Pressure) 가산점 (고급/중급)
+        // 2. 궁성 포위 압박(Palace Pressure) 가산점 (고급/중급: 차 갇힘 방지하도록 점수 정상화)
         if (level === 'hard' || level === 'mid') {
           const targetKing = p.team === TEAM_CHO ? hanKingPos : choKingPos;
           if (targetKing) {
             const dist = Math.abs(targetKing.x - x) + Math.abs(targetKing.y - y);
             if (dist <= 3) {
-              if (p.type === TYPE_CAR) val += (level === 'hard' ? 120 : 60);
-              else if (p.type === TYPE_CANNON) val += (level === 'hard' ? 90 : 45);
-              else if (p.type === TYPE_HORSE) val += (level === 'hard' ? 60 : 30);
+              if (p.type === TYPE_CAR) val += (level === 'hard' ? 40 : 25);
+              else if (p.type === TYPE_CANNON) val += (level === 'hard' ? 30 : 20);
+              else if (p.type === TYPE_HORSE) val += (level === 'hard' ? 20 : 15);
             }
           }
         }
@@ -4127,10 +4151,10 @@ const aiLevelData = {
     id: 'opt-ai-hard',
     val: 'hard',
     title: '고급(극강 고수) 수준 안내',
-    detail: '아마 3~5단 특급 유단자 수준의 극강 AI입니다! 초고속 50배 가속 엔진과 PVS 탐색, 16수 프로 정석 및 형태 중심 평가 함수로 일반인이 이기기 극히 어렵습니다.',
-    speech: '고급을 선택하셨습니다. 아마 3단 이상 극강 고수 레벨의 심층 수읽기 대국입니다.',
+    detail: '초반 첫 수부터 쉼 없는 심층 수읽기를 수행하며, 정밀한 기물 수비와 외통수 연장군 탐색을 구사하는 최고 기력 단계입니다. 일반인이 방심하면 단번에 외통에 몰릴 수 있습니다.',
+    speech: '고급을 선택하셨습니다. 첫 수부터 정밀한 심층 수읽기로 맞서는 최고 기력 대국입니다.',
     shortTitle: '기력: 고급',
-    shortSub: '(극강 유단자)'
+    shortSub: '(심층 수읽기)'
   }
 };
 
